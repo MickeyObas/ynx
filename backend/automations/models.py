@@ -33,7 +33,6 @@ class WorkspaceMembership(models.Model):
         unique_together = ("workspace", "user")
 
 
-
 class Integration(TimeStampedModel):
     """
     Represents a connector type (e.g., Google Sheets, Slack).

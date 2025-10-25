@@ -1,3 +1,6 @@
 from django.contrib import admin
 
-# Register your models here.
+from .models import Integration, Connection
+
+admin.site.register(Integration)
+admin.site.register(Connection)
