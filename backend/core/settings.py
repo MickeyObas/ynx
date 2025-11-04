@@ -126,3 +126,22 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.BasicAuthentication",
     ),
 }
+
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
+GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI')
+GOOGLE_REDIRECT_BASE = "http://localhost:8000/api/integrations/oauth"
+
+GOOGLE_CLIENT_CONFIG = {
+  "web": {
+    "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+    "project_id": os.getenv("GOOGLE_PROJECT_ID"),
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+    "redirect_uris": [
+      "http://localhost:8000/api/integrations/oauth/google/callback/"
+    ]
+  }
+}
