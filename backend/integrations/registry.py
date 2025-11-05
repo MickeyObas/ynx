@@ -1,10 +1,10 @@
 # integrations/registry.py
 from typing import Dict
-from integrations.services.google_forms import GoogleFormsService, GoogleFormsServicee
+from integrations.services.google_forms import GoogleFormsService
 from integrations.services.gmail import GmailService
 
 INTEGRATION_REGISTRY: Dict[str, type] = {
-    GoogleFormsServicee.id: GoogleFormsServicee,
+    GoogleFormsService.id: GoogleFormsService,
     GmailService.id: GmailService
 }
 

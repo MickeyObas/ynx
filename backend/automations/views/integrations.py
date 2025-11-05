@@ -17,4 +17,4 @@ def connection_test(self, connection_id):
     print(service.test_connection())
     if service.test_connection():
         return Response({'status': 'Up and running!'})
-    return Response({'status': 'Error. Connection not working!'})
+    return Response({'status': 'Error. Connection not working!'}, status=400)

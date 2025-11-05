@@ -10,22 +10,44 @@ class GmailService(GoogleBaseService):
     name = "Google Gmail"
     description = "Send and read emails using Gmail API"
 
+    TRIGGERS = {
+        "new_email": {
+            "name": "New Email",
+            "description": "Triggered when a new email is received"
+        }
+    }
+
+    ACTIONS = {
+        "send_email": {
+            "name": "Send Email",
+            "description": "Send an email message"
+        }
+    }
+
     @classmethod
     def get_scopes(cls) -> list[str]:
         return [
             "https://www.googleapis.com/auth/gmail.readonly",
             "https://www.googleapis.com/auth/gmail.send",
         ]
+    
+    def perform_action(self, action_id, connection, payload):
+        action_map = {
+            "send_email": self.send_email
+        }
+        if action_id not in action_map:
+            raise ValueError(f"Unknown action: {action_id}")
+        return action_map[action_id](connection, payload)
 
     def __init__(self, connection=None):
         super().__init__(connection)
         self.credentials = self.build_credentials()
         self.service = build("gmail", "v1", credentials=self.credentials)
 
-    def send_email(self, to: str, subject: str, body: str):
-        message = MIMEText(body)
-        message["to"] = to
-        message["subject"] = subject
+    def send_email(self, connection, payload):
+        message = MIMEText(payload.body)
+        message["to"] = payload.to
+        message["subject"] = payload.subject
         raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
 
         result = (
@@ -35,12 +57,3 @@ class GmailService(GoogleBaseService):
             .execute()
         )
         return result
-    
-    # def test_connection(self):
-    #     """Try to get user profile to confirm validity."""
-    #     try:
-    #         print(self.service.users().getProfile(userId="me").execute())
-    #         return True
-    #     except Exception:
-    #         return False
-    

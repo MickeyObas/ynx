@@ -90,6 +90,7 @@ class Automation(TimeStampedModel):
     name = models.CharField(max_length=255)
     owner = models.ForeignKey(User, on_delete=models.PROTECT, related_name="automations")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
+    # NOTE: Should an automation have multiple trigers? 
     trigger = models.ForeignKey("Trigger", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
     settings = models.JSONField(default=dict)
 

@@ -1,11 +1,15 @@
 from __future__ import annotations
-
-
+import json
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 import requests
-# from django.utils import timezone
-from datetime import timedelta, timezone
+from datetime import timedelta, timezone, datetime
+
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import Flow
+
+from core.settings import GOOGLE_CLIENT_CONFIG
+from automations.models import Connection
 
 
 class BaseIntegrationService(ABC):
@@ -18,18 +22,32 @@ class BaseIntegrationService(ABC):
     description: str = ""
     oauth_enabled: bool = False
     webhook_supported: bool = False
+    
+    TRIGGERS = {}
+    ACTIONS = {}
 
     def __init__(self, connection: Optional["Connection"] = None):
         """
         Each integration can receive an optional Connection object (workspace-specific auth/config)
         """
         self.connection = connection
-        self.config = connection.config if connection else {}
-        self.secrets = connection.secrets if connection else {}
+        
+    @property
+    def secrets(self):
+        return self.connection.secrets or {}
+    
+    @secrets.setter
+    def secrets(self, value):
+        self.connection.secrets = value
+        self.connection.save(update_fields=["secrets"])
 
     @abstractmethod
     def test_connection(self) -> bool:
         """Checks if the connection credentials are valid."""
+        pass
+
+    @abstractmethod
+    def perform_action(self, action_id, connection, payload):
         pass
 
     def connect(self, **kwargs) -> Dict[str, Any]:
@@ -60,8 +78,9 @@ class BaseIntegrationService(ABC):
         
         response = requests.get(url, headers=headers, params=params)
 
-        if response.status_code in (401, 403):
-            print("TOKEN EXPIRED. ATTEMPTING REFRESH!!!")
+        if response.status_code in (400, 401, 403) and retry:
+            print("Token expired. Attempting refresh...")
+            
             self.refresh_token()
             new_token = self.secrets.get("access_token")
             if new_token:
@@ -70,16 +89,6 @@ class BaseIntegrationService(ABC):
 
         response.raise_for_status()
         return response.json()
-
-
-from typing import Optional, Dict, Any
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import Flow
-from datetime import datetime
-import json
-import requests
-
-from core.settings import GOOGLE_CLIENT_CONFIG
 
 
 class GoogleBaseService(BaseIntegrationService):
@@ -160,16 +169,21 @@ class GoogleBaseService(BaseIntegrationService):
         r = requests.post("https://oauth2.googleapis.com/token", data=data)
         r.raise_for_status()
         tokens = r.json()
-        self.secrets["access_token"] = tokens["access_token"]
+
+        secrets = self.secrets
+        secrets["access_token"] = tokens["access_token"]
+
         if "expires_in" in tokens:
             expiry_time = datetime.utcnow() + timedelta(seconds=tokens["expires_in"])
-            self.secrets["expiry"] = expiry_time.replace(microsecond=0).isoformat() 
+            secrets["expiry"] = expiry_time.replace(microsecond=0).isoformat() 
+
+        self.secrets = secrets
 
     def test_connection(self) -> bool:
         """Try a simple request to confirm credentials are valid."""
 
         try:
-            print(self.http_get(f"{self.GOOGLE_API_BASE}/oauth2/v3/tokeninfo"))
+            self.http_get(f"{self.GOOGLE_API_BASE}/oauth2/v3/tokeninfo")
             return True
         except Exception as e:
             print(e)
