@@ -34,7 +34,7 @@ class BaseIntegrationService(ABC):
         
     @property
     def secrets(self):
-        return self.connection.secrets or {}
+        return getattr(self.connect, "secrets", {}) or None
     
     @secrets.setter
     def secrets(self, value):
@@ -89,6 +89,16 @@ class BaseIntegrationService(ABC):
 
         response.raise_for_status()
         return response.json()
+    
+    @classmethod
+    def as_dict(cls):
+        return {
+            "id": cls.id,
+            "name": cls.name,
+            "description": cls.description,
+            "triggers": cls.TRIGGERS,
+            "actions": cls.ACTIONS,
+        }
 
 
 class GoogleBaseService(BaseIntegrationService):

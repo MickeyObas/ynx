@@ -111,13 +111,15 @@ class Trigger(TimeStampedModel):
         SCHEDULE = "schedule", "Schedule"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    trigger_key = models.CharField(max_length=100)
     type = models.CharField(max_length=20, choices=Type.choices)
     config = models.JSONField(default=dict)
+    integration = models.OneToOneField(Integration, on_delete=models.CASCADE)
     connection = models.ForeignKey(Connection, null=True, blank=True, on_delete=models.SET_NULL)
-    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name="triggers")
+    automation = models.ForeignKey("Automation", on_delete=models.CASCADE, related_name="triggers")
 
     def __str__(self):
-        return f"{self.type} trigger for {self.workspace.id}"
+        return f"{self.type} trigger for {self.automation.id}"
     
 
 class Step(TimeStampedModel):

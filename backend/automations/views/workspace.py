@@ -7,12 +7,12 @@ from django.shortcuts import get_object_or_404
 from django.db import transaction
 from django.contrib.auth import get_user_model
 
-from ..serializers import (
+from automations.serializers import (
     WorkspaceSerializer,
     WorkspaceMembershipSerializer,
 )
 
-from ..models import Workspace, WorkspaceMembership
+from automations.models import Workspace, WorkspaceMembership
 
 User = get_user_model()
 

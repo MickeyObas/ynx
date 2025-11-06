@@ -16,7 +16,16 @@ class GoogleFormsService(GoogleBaseService):
     TRIGGERS = {
         "new_response": {
             "name": "New Response",
-            "description": "Triggered when a new response on a form is received"
+            "description": "Triggered when a new response on a form is received",
+            "type": "webhook",
+            "config_schema": {
+                "form_id": {
+                    "type": "string",
+                    "label": "Form ID",
+                    "required": True,
+                    "help_text": "The ID of the Google Form to watch."
+                }
+            }
         }
     }
 
@@ -31,11 +40,3 @@ class GoogleFormsService(GoogleBaseService):
     
     def perform_action(self, action_id, connection, payload):
         return super().perform_action(action_id, connection, payload)
-
-    # def test_connection(self):
-    #     headers = {"Authorization": f"Bearer {self.secrets['access_token']}"}
-    #     # TODO: Use non-static values for form ids
-    #     form_id = "1UXlc3Ndi1ZleBjOGZr2ffH-4j41iXNnTda2H-PXpaDE"
-    #     response = requests.get(f"https://forms.googleapis.com/v1/forms/{form_id}", headers=headers)
-    #     response.raise_for_status()
-    #     return response.json()
