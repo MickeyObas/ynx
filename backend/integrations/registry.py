@@ -1,13 +1,18 @@
 # integrations/registry.py
 from typing import Dict
-from integrations.services.google_forms import GoogleFormsService
-from integrations.services.gmail import GmailService
+# from integrations.services.google_forms import GoogleFormsService
+# from integrations.services.gmail import GmailService
 
-INTEGRATION_REGISTRY: Dict[str, type] = {
-    GoogleFormsService.id: GoogleFormsService,
-    GmailService.id: GmailService
-}
+# INTEGRATION_REGISTRY: Dict[str, type] = {
+#     GoogleFormsService.id: GoogleFormsService,
+#     GmailService.id: GmailService
+# }
 
+INTEGRATION_REGISTRY = {}
+
+def register_integration(service_cls):
+    INTEGRATION_REGISTRY[service_cls.id] = service_cls
+    return service_cls
 
 def get_integration_service(integration_id, connection=None):
     """

@@ -34,10 +34,14 @@ class BaseIntegrationService(ABC):
         
     @property
     def secrets(self):
-        return getattr(self.connect, "secrets", {}) or None
+        if not self.connection:
+            return {}
+        return self.connection.secrets or {}
     
     @secrets.setter
     def secrets(self, value):
+        if not self.connection:
+            raise RuntimeError
         self.connection.secrets = value
         self.connection.save(update_fields=["secrets"])
 

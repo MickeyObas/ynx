@@ -3,8 +3,10 @@ from email.mime.text import MIMEText
 import base64
 
 from .base import GoogleBaseService
+from integrations.registry import register_integration
 
 
+@register_integration
 class GmailService(GoogleBaseService):
     id = "gmail"
     name = "Google Gmail"

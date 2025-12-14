@@ -9,7 +9,7 @@ from automations.models import Integration, Connection, Workspace
 from automations.serializers import IntegrationSerializer, IntegrationThinSerializer
 
 import requests
-from integrations.registry import get_integration_service
+from integrations.registry import get_integration_service, INTEGRATION_REGISTRY
 
 
 @api_view(['GET'])
@@ -37,3 +37,9 @@ def integration_list(request):
     integrations = Integration.objects.all()
     serializer = IntegrationThinSerializer(integrations, many=True)
     return Response(serializer.data)
+
+
+@api_view(['GET'])
+def trigger_list(request, integration_id):
+    service_cls = INTEGRATION_REGISTRY[integration_id]
+    return Response(service_cls.as_dict()["triggers"])

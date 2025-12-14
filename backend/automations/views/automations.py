@@ -37,14 +37,6 @@ class AutomationViewSet(viewsets.ModelViewSet):
             status=Automation.Status.DRAFT
         )
 
-    # @action(detail=True, methods=["get"], url_path="triggers")
-    # def list_triggers(self, request, workspace_pk=None, pk=None):
-    #     """List all triggers for this automation."""
-    #     automation = self.get_object()
-    #     triggers = automation.triggers.all()
-    #     serializer = TriggerSerializer(triggers, many=True)
-    #     return Response(serializer.data)
-
     @action(detail=True, methods=["post"], url_path="triggers")
     def add_trigger(self, request, workspace_pk=None, pk=None):
         """Add a new trigger to this automation."""
