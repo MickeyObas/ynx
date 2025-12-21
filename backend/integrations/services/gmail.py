@@ -1,3 +1,4 @@
+from typing import Any, Dict
 from googleapiclient.discovery import build
 from email.mime.text import MIMEText
 import base64
@@ -45,6 +46,10 @@ class GmailService(GoogleBaseService):
         super().__init__(connection)
         self.credentials = self.build_credentials()
         self.service = build("gmail", "v1", credentials=self.credentials)
+
+    def connect(self, config, secrets) -> Dict[str, Any]:
+        print("I AM CONNECTING!!!!")
+        return self.exchange_code(secrets["authorization_code"])
 
     def send_email(self, connection, payload):
         message = MIMEText(payload.body)

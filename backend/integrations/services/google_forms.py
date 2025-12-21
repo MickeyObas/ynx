@@ -1,11 +1,14 @@
+from typing import Any, Dict
 from django.conf import settings
 from .base import BaseIntegrationService, GoogleBaseService
+from integrations.registry import register_integration
 
 import requests
 import json
 import urllib.parse
 
 
+@register_integration
 class GoogleFormsService(GoogleBaseService):
     id = "google_forms"
     name = "Google Forms"
@@ -40,3 +43,7 @@ class GoogleFormsService(GoogleBaseService):
     
     def perform_action(self, action_id, connection, payload):
         return super().perform_action(action_id, connection, payload)
+    
+    def connect(self, config, secrets) -> Dict[str, Any]:
+         print("I AM CONNECTING!!!!")
+         return self.exchange_code(secrets["authorization_code"])

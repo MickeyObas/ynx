@@ -2,6 +2,8 @@ from rest_framework import status, permissions, viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, action
 
+from django.utils import timezone
+
 from automations.models import Connection, Integration, Workspace
 from automations.serializers import ConnectionSerializer
 from integrations.registry import INTEGRATION_REGISTRY, get_integration_service
@@ -17,38 +19,21 @@ class ConnectionViewset(viewsets.ModelViewSet):
 
         return queryset
 
+    # TODO: Change path to initiate
     @action(detail=False, methods=["post"], url_path="connect")
-    def connect(self, request, **kwargs):
+    def initiate(self, request, **kwargs):
         data = request.data
-        data["workspace_id"] = self.kwargs.get("workspace_pk")
+        workspace_id = self.kwargs.get("workspace_pk")
+        data["workspace_id"] = workspace_id
         serializer = ConnectionSerializer(data=data)
         serializer.is_valid(raise_exception=True)
-
         connection = serializer.save()
         service = get_integration_service(connection.integration.id, connection)
-
-        # Perform integration-specific connect logic
-        new_secrets = service.connect(
-            config=connection.config,
-            secrets=connection.secrets
-        )
-
-        if new_secrets:
-            connection.secrets = new_secrets
-            connection.save(update_fields=["secrets"])
-
-        if not service.test_connection():
-            connection.status = Connection.Status.DISABLED
-            connection.save(update_fields=["status"])
-            return Response(
-                {"error": "Connection test failed"},
-                status=400
-            )
-
-        connection.status = Connection.Status.ACTIVE
-        connection.save(update_fields=["status"])
-
-        return Response(ConnectionSerializer(connection).data, status=201)
+        auth_url = service.get_auth_url(connection.id)
+        return Response({
+            "connection_id": str(connection.id),
+            "auth_url": auth_url
+        })
     
     def create(self, request, *args, **kwargs):
         print("Hello WORLD")

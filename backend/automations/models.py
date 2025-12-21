@@ -63,7 +63,7 @@ class Connection(TimeStampedModel):
     display_name = models.CharField(max_length=200)
     config = models.JSONField(default=dict)     
     secrets = models.JSONField(default=dict)        
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DISABLED)
     last_tested = models.DateTimeField(null=True, blank=True)
 
     class Meta:

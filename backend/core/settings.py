@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     # Internal Apps
     'api.apps.ApiConfig',
     'automations.apps.AutomationsConfig',
+    'integrations.apps.IntegrationsConfig',
     'users.apps.UsersConfig',
 
     # External Apps

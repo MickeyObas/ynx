@@ -54,12 +54,13 @@ class BaseIntegrationService(ABC):
     def perform_action(self, action_id, connection, payload):
         pass
 
-    def connect(self, **kwargs) -> Dict[str, Any]:
+    def connect(self, config, secrets) -> Dict[str, Any]:
         """
         Called during user connection setup.
         Could perform OAuth or API key validation.
         Returns data to store in connection.secrets/config.
         """
+        print("DEFAULT ATTTEMPT TO CONNECT")
         return {}
 
     def refresh_token(self) -> None:
@@ -79,12 +80,12 @@ class BaseIntegrationService(ABC):
         headers = headers or {}
         if token := self.secrets.get("access_token"):
             headers["Authorization"] = f"Bearer {token}"
-        
+        print("HEADERS ----> ", headers)
         response = requests.get(url, headers=headers, params=params)
 
         if response.status_code in (400, 401, 403) and retry:
             print("Token expired. Attempting refresh...")
-            
+            print(response.text)
             self.refresh_token()
             new_token = self.secrets.get("access_token")
             if new_token:
@@ -94,6 +95,9 @@ class BaseIntegrationService(ABC):
         response.raise_for_status()
         return response.json()
     
+    def get_auth_url(self, **kwargs):
+        pass
+
     @classmethod
     def as_dict(cls):
         return {
@@ -126,7 +130,7 @@ class GoogleBaseService(BaseIntegrationService):
         return []
 
     @classmethod
-    def get_auth_url(cls, workspace_id: str, integration_id: str) -> str:
+    def get_auth_url(cls, connection_id: str) -> str:
         """Generate the Google OAuth consent screen URL."""
         flow = Flow.from_client_config(
             cls.GOOGLE_CLIENT_CONFIG,
@@ -134,7 +138,7 @@ class GoogleBaseService(BaseIntegrationService):
             redirect_uri="http://localhost:8000/api/integrations/oauth/google/callback/",
         )
         # Pass both workspace_id + service_id in the state
-        state = json.dumps({"workspace_id": workspace_id, "integration_id": integration_id})
+        state = json.dumps({"connection_id": str(connection_id)})
         auth_url, _ = flow.authorization_url(
             access_type="offline", prompt="consent", state=state
         )
@@ -170,8 +174,10 @@ class GoogleBaseService(BaseIntegrationService):
     # ---- Common OAuth utilities ----
     def refresh_token(self) -> None:
         """Refresh access token when expired."""
+        print("Actually refreshing the token!!!")
         refresh_token = self.secrets.get("refresh_token")
         if not refresh_token:
+            print("No refreh token")
             return
 
         data = {
@@ -180,6 +186,7 @@ class GoogleBaseService(BaseIntegrationService):
             "refresh_token": refresh_token,
             "grant_type": "refresh_token",
         }
+ 
         r = requests.post("https://oauth2.googleapis.com/token", data=data)
         r.raise_for_status()
         tokens = r.json()
@@ -188,6 +195,7 @@ class GoogleBaseService(BaseIntegrationService):
         secrets["access_token"] = tokens["access_token"]
 
         if "expires_in" in tokens:
+            print("Tokens refreshed")
             expiry_time = datetime.utcnow() + timedelta(seconds=tokens["expires_in"])
             secrets["expiry"] = expiry_time.replace(microsecond=0).isoformat() 
 
@@ -197,6 +205,7 @@ class GoogleBaseService(BaseIntegrationService):
         """Try a simple request to confirm credentials are valid."""
 
         try:
+            print("TESTING GOOGLE CONNECTION")
             self.http_get(f"{self.GOOGLE_API_BASE}/oauth2/v3/tokeninfo")
             return True
         except Exception as e:
