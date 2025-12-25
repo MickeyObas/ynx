@@ -82,3 +82,15 @@ class ConnectionSerializer(serializers.ModelSerializer):
             workspace=workspace,
             **validated_data
         )
+
+
+class ConnectionDisplaySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Connection
+        fields = [
+            "id",
+            "integration",
+            "display_name",
+            "status",
+            "last_tested"
+        ]

@@ -21,6 +21,7 @@ class GoogleFormsService(GoogleBaseService):
             "name": "New Response",
             "description": "Triggered when a new response on a form is received",
             "type": "webhook",
+            "is_testable": True,
             "config_schema": {
                 "form_id": {
                     "type": "string",
@@ -28,7 +29,9 @@ class GoogleFormsService(GoogleBaseService):
                     "required": True,
                     "help_text": "The ID of the Google Form to watch."
                 }
-            }
+            },
+            "normalize": "normalize_new_response",
+            "sample_event": "sample_new_response",
         }
     }
 
@@ -47,3 +50,21 @@ class GoogleFormsService(GoogleBaseService):
     def connect(self, config, secrets) -> Dict[str, Any]:
          print("I AM CONNECTING!!!!")
          return self.exchange_code(secrets["authorization_code"])
+    
+    # ----- Trigger: New Response -----
+
+    def normalize_new_response(self, payload):
+        return {
+            "response_id": payload["responseId"],
+            "submitted_at": payload["timestamp"],
+            "answers": payload["answers"],
+        }
+
+    def sample_new_response(self):
+        return {
+            "response_id": "test_123",
+            "submitted_at": "2025-01-01T12:00:00Z",
+            "answers": {
+                "Email": "test@example.com"
+            }
+        }

@@ -9,6 +9,11 @@ from integrations.registry import register_integration
 
 @register_integration
 class GmailService(GoogleBaseService):
+    SCOPES = [
+        "https://www.googleapis.com/auth/gmail.readonly",
+        "https://www.googleapis.com/auth/gmail.send",
+    ]
+
     id = "gmail"
     name = "Google Gmail"
     description = "Send and read emails using Gmail API"
@@ -16,7 +21,39 @@ class GmailService(GoogleBaseService):
     TRIGGERS = {
         "new_email": {
             "name": "New Email",
-            "description": "Triggered when a new email is received"
+            "description": "Triggered when a new email is received in the inbox",
+            "type": "polling",
+            "is_testable": True,
+            "config_schema": {
+                "label": {
+                    "type": "string",
+                    "label": "Gmail Label",
+                    "required": False,
+                    "help_text": "Only trigger for emails with this Gmail label (e.g. INBOX, UNREAD, STARRED). Leave empty for all emails."
+                },
+                "from_email": {
+                    "type": "string",
+                    "label": "From Email",
+                    "required": False,
+                    "help_text": "Only trigger when the email is sent from this address."
+                },
+                "subject_contains": {
+                    "type": "string",
+                    "label": "Subject Contains",
+                    "required": False,
+                    "help_text": "Only trigger when the email subject contains this text."
+                },
+                "include_attachments": {
+                    "type": "boolean",
+                    "label": "Include Attachments",
+                    "required": False,
+                    "default": False,
+                    "help_text": "Whether to include attachments in the trigger payload."
+                }
+            },
+            "fetch": "fetch_new_emails",
+            "normalize": "normalize_new_email",
+            "sample_event": "sample_new_email"
         }
     }
 
@@ -27,13 +64,9 @@ class GmailService(GoogleBaseService):
         }
     }
 
-    @classmethod
-    def get_scopes(cls) -> list[str]:
-        return [
-            "https://www.googleapis.com/auth/gmail.readonly",
-            "https://www.googleapis.com/auth/gmail.send",
-        ]
-    
+    def build_client(self, credentials):
+        return build("gmail", "v1", credentials=credentials)
+
     def perform_action(self, action_id, connection, payload):
         action_map = {
             "send_email": self.send_email
@@ -64,3 +97,22 @@ class GmailService(GoogleBaseService):
             .execute()
         )
         return result
+    
+    def get_client(self, connection):
+        return super().get_client(connection)
+
+    # ----- Trigger: New Emails -----
+
+    def fetch_new_emails(self, client, limit, since):
+        response = client.messages().list(userId="me", maxResults=limit).execute()
+        return response["messages"]
+
+    def normalize_new_email(self, payload):
+        return {
+            # "response_id": payload["responseId"],
+            # "submitted_at": payload["timestamp"],
+            "id": payload["id"],
+        }
+
+    def sample_new_email(self):
+        pass

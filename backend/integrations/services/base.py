@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json
+import json, time
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 import requests
@@ -7,6 +7,7 @@ from datetime import timedelta, timezone, datetime
 
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
+from google.auth.transport.requests import Request
 
 from core.settings import GOOGLE_CLIENT_CONFIG
 from automations.models import Connection
@@ -17,7 +18,7 @@ class BaseIntegrationService(ABC):
     Abstract base for all integration services.
     """
 
-    id: str | None = None  # e.g. "google_forms"
+    id: str | None = None
     name: str | None = None
     description: str = ""
     oauth_enabled: bool = False
@@ -44,6 +45,10 @@ class BaseIntegrationService(ABC):
             raise RuntimeError
         self.connection.secrets = value
         self.connection.save(update_fields=["secrets"])
+
+    @abstractmethod
+    def get_client(self, connection):
+        pass
 
     @abstractmethod
     def test_connection(self) -> bool:
@@ -115,6 +120,8 @@ class GoogleBaseService(BaseIntegrationService):
     Handles shared OAuth and credential logic.
     """
 
+    SCOPES = []
+
     oauth_enabled = True
     GOOGLE_API_BASE = "https://www.googleapis.com"
     GOOGLE_CLIENT_CONFIG = GOOGLE_CLIENT_CONFIG
@@ -123,11 +130,9 @@ class GoogleBaseService(BaseIntegrationService):
         super().__init__(connection)
         self.client_config = GOOGLE_CLIENT_CONFIG
 
-    # ---- OAuth ----
     @classmethod
     def get_scopes(cls) -> list[str]:
-        """Each subclass overrides this."""
-        return []
+        return cls.SCOPES
 
     @classmethod
     def get_auth_url(cls, connection_id: str) -> str:
@@ -137,7 +142,6 @@ class GoogleBaseService(BaseIntegrationService):
             scopes=cls.get_scopes(),
             redirect_uri="http://localhost:8000/api/integrations/oauth/google/callback/",
         )
-        # Pass both workspace_id + service_id in the state
         state = json.dumps({"connection_id": str(connection_id)})
         auth_url, _ = flow.authorization_url(
             access_type="offline", prompt="consent", state=state
@@ -160,6 +164,23 @@ class GoogleBaseService(BaseIntegrationService):
             "refresh_token": creds.refresh_token,
             "expiry": creds.expiry.isoformat() if creds.expiry else None,
         }
+    
+    def get_client(self, connection):
+        if connection.status != "active":
+            raise RuntimeError("Connection is not active")
+        
+        creds = self.build_credentials()
+
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+
+            connection.secrets.update({
+                "access_token": creds.token,
+                "expires_at": int(time.time() + creds.expiry.timestamp())
+            })
+            connection.save(update_fields=["secrets"])
+
+        return self.build_client(creds)
 
     def build_credentials(self) -> Credentials:
         """Builds a google Credentials object from stored secrets."""
@@ -169,7 +190,11 @@ class GoogleBaseService(BaseIntegrationService):
             token_uri="https://oauth2.googleapis.com/token",
             client_id=self.client_config["web"]["client_id"],
             client_secret=self.client_config["web"]["client_secret"],
+            scopes=self.get_scopes()
         )
+
+    def build_client(self, credentials):
+        raise NotImplementedError
 
     # ---- Common OAuth utilities ----
     def refresh_token(self) -> None:

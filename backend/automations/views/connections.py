@@ -5,7 +5,7 @@ from rest_framework.decorators import api_view, action
 from django.utils import timezone
 
 from automations.models import Connection, Integration, Workspace
-from automations.serializers import ConnectionSerializer
+from automations.serializers import ConnectionSerializer, ConnectionDisplaySerializer
 from integrations.registry import INTEGRATION_REGISTRY, get_integration_service
 
 
@@ -16,8 +16,12 @@ class ConnectionViewset(viewsets.ModelViewSet):
     def get_queryset(self):
         workspace_id = self.kwargs.get("workspace_pk")
         queryset = Connection.objects.filter(workspace_id=workspace_id)
-
         return queryset
+    
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        serializer = ConnectionDisplaySerializer(qs, many=True)
+        return Response(serializer.data, status=200)
 
     # TODO: Change path to initiate
     @action(detail=False, methods=["post"], url_path="connect")
@@ -25,6 +29,18 @@ class ConnectionViewset(viewsets.ModelViewSet):
         data = request.data
         workspace_id = self.kwargs.get("workspace_pk")
         data["workspace_id"] = workspace_id
+
+        # If the workspace already has an existing connection for the integration
+        connection_qs = Connection.objects.filter(
+            workspace_id=workspace_id,
+            integration_id=data["integration_id"]
+        )
+        if connection_qs.exists():
+            connection = connection_qs.first()
+            return Response({
+                "connection_id": connection.id
+            })
+
         serializer = ConnectionSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         connection = serializer.save()

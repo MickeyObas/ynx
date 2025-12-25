@@ -110,6 +110,12 @@ class Trigger(TimeStampedModel):
         POLL = "poll", "Polling"
         SCHEDULE = "schedule", "Schedule"
 
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        DISABLED = "disabled", "Disabled"
+        TESTED = "tested", "Tested"
+        DRAFT = "draft", "Draft"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     trigger_key = models.CharField(max_length=100)
     type = models.CharField(max_length=20, choices=Type.choices)
@@ -117,6 +123,9 @@ class Trigger(TimeStampedModel):
     integration = models.OneToOneField(Integration, on_delete=models.CASCADE)
     connection = models.ForeignKey(Connection, null=True, blank=True, on_delete=models.SET_NULL)
     automation = models.ForeignKey("Automation", on_delete=models.CASCADE, related_name="triggers")
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
+    last_tested_at = models.DateTimeField(null=True, blank=True)
+    last_run_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.type} trigger for {self.automation.id}"
