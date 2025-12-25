@@ -4,5 +4,6 @@ urlpatterns = [
     path('auth/', include('users.urls')),
     path("automations/", include("automations.automation_urls")),
     path("integrations/", include("automations.integration_urls")),
+    path("triggers/", include("triggers.urls")),
     path("workspaces/", include("automations.workspace_urls"))
 ]

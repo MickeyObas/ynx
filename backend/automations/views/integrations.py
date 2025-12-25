@@ -18,7 +18,6 @@ def connection_test(request, connection_id):
     connection = Connection.objects.get(id=connection_id)
 
     service = get_integration_service(connection.integration.id, connection)
-    print(service.test_connection())
     if service.test_connection():
         return Response({'status': 'Up and running!'})
     

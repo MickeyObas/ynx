@@ -27,10 +27,9 @@ class BaseIntegrationService(ABC):
     TRIGGERS = {}
     ACTIONS = {}
 
-    def __init__(self, connection: Optional["Connection"] = None):
-        """
-        Each integration can receive an optional Connection object (workspace-specific auth/config)
-        """
+    def __init__(self, connection: Connection):
+        if not connection:
+            raise RuntimeError("Connection must be provided")
         self.connection = connection
         
     @property
@@ -65,7 +64,6 @@ class BaseIntegrationService(ABC):
         Could perform OAuth or API key validation.
         Returns data to store in connection.secrets/config.
         """
-        print("DEFAULT ATTTEMPT TO CONNECT")
         return {}
 
     def refresh_token(self) -> None:
@@ -85,12 +83,9 @@ class BaseIntegrationService(ABC):
         headers = headers or {}
         if token := self.secrets.get("access_token"):
             headers["Authorization"] = f"Bearer {token}"
-        print("HEADERS ----> ", headers)
         response = requests.get(url, headers=headers, params=params)
 
         if response.status_code in (400, 401, 403) and retry:
-            print("Token expired. Attempting refresh...")
-            print(response.text)
             self.refresh_token()
             new_token = self.secrets.get("access_token")
             if new_token:
@@ -166,9 +161,11 @@ class GoogleBaseService(BaseIntegrationService):
         }
     
     def get_client(self, connection):
+        assert connection is not None, "Connection is None"
+
         if connection.status != "active":
             raise RuntimeError("Connection is not active")
-        
+
         creds = self.build_credentials()
 
         if creds.expired and creds.refresh_token:
@@ -184,6 +181,9 @@ class GoogleBaseService(BaseIntegrationService):
 
     def build_credentials(self) -> Credentials:
         """Builds a google Credentials object from stored secrets."""
+        if not self.secrets:
+            raise RuntimeError("Connection secrets are missing. User must reconnect.")
+        
         return Credentials(
             token=self.secrets.get("access_token"),
             refresh_token=self.secrets.get("refresh_token"),
@@ -199,10 +199,9 @@ class GoogleBaseService(BaseIntegrationService):
     # ---- Common OAuth utilities ----
     def refresh_token(self) -> None:
         """Refresh access token when expired."""
-        print("Actually refreshing the token!!!")
         refresh_token = self.secrets.get("refresh_token")
         if not refresh_token:
-            print("No refreh token")
+            print("No refresh token")
             return
 
         data = {
@@ -230,7 +229,6 @@ class GoogleBaseService(BaseIntegrationService):
         """Try a simple request to confirm credentials are valid."""
 
         try:
-            print("TESTING GOOGLE CONNECTION")
             self.http_get(f"{self.GOOGLE_API_BASE}/oauth2/v3/tokeninfo")
             return True
         except Exception as e:

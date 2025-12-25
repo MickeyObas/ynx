@@ -22,7 +22,7 @@ class GmailService(GoogleBaseService):
         "new_email": {
             "name": "New Email",
             "description": "Triggered when a new email is received in the inbox",
-            "type": "polling",
+            "type": "poll",
             "is_testable": True,
             "config_schema": {
                 "label": {
@@ -81,7 +81,6 @@ class GmailService(GoogleBaseService):
         self.service = build("gmail", "v1", credentials=self.credentials)
 
     def connect(self, config, secrets) -> Dict[str, Any]:
-        print("I AM CONNECTING!!!!")
         return self.exchange_code(secrets["authorization_code"])
 
     def send_email(self, connection, payload):
@@ -97,14 +96,12 @@ class GmailService(GoogleBaseService):
             .execute()
         )
         return result
-    
-    def get_client(self, connection):
-        return super().get_client(connection)
 
     # ----- Trigger: New Emails -----
 
     def fetch_new_emails(self, client, limit, since):
-        response = client.messages().list(userId="me", maxResults=limit).execute()
+        response = client.users().messages().list(userId="me", maxResults=limit).execute()
+        print(response)
         return response["messages"]
 
     def normalize_new_email(self, payload):

@@ -48,7 +48,6 @@ class VerificationService:
             return verification_code.token
 
         except Exception as e:
-            print(e)
             raise ValueError(e)
 
     @staticmethod

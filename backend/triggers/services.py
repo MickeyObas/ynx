@@ -1,11 +1,10 @@
 from integrations.registry import INTEGRATION_REGISTRY
-
+import traceback
 
 class PollingTriggerExecutor:
     def run(self, *, service, trigger_key, trigger_instance, connection, payload=None, mode="test", limit=5):
         trigger = service.TRIGGERS[trigger_key]
         client = service.get_client(connection)
-
         since = None
         if mode == "live":
             since = trigger_instance.last_run_at
@@ -49,10 +48,10 @@ class WebhookTriggerExecutor:
 
 
 def resolve_trigger_executor(trigger_definition):
-    if trigger_definition.type == "polling":
+    if trigger_definition.get("type") == "poll":
         return PollingTriggerExecutor()
 
-    if trigger_definition.type == "webhook":
+    if trigger_definition.get("type") == "webhook":
         return WebhookTriggerExecutor()
 
     raise ValueError("Unknown trigger type")
@@ -81,6 +80,7 @@ def run_trigger_test(*, service, trigger_key, trigger_instance, connection):
             limit=5
         )
     except Exception as e:
+        traceback.print_exc()
         return {
             "success": False,
             "message": str(e),

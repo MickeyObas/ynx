@@ -52,7 +52,6 @@ class ConnectionViewset(viewsets.ModelViewSet):
         })
     
     def create(self, request, *args, **kwargs):
-        print("Hello WORLD")
         workspace_id = self.kwargs.get("workspace_pk")
         data = request.data.copy()
         data["workspace_id"] = workspace_id
