@@ -1,7 +1,8 @@
 from typing import Any, Dict
 from googleapiclient.discovery import build
 from email.mime.text import MIMEText
-import base64
+from email.utils import parseaddr
+import base64, json
 
 from .base import GoogleBaseService
 from integrations.registry import register_integration
@@ -53,7 +54,8 @@ class GmailService(GoogleBaseService):
             },
             "fetch": "fetch_new_emails",
             "normalize": "normalize_new_email",
-            "sample_event": "sample_new_email"
+            "sample_event": "sample_new_email",
+            "apply_filters": "apply_filters"
         }
     }
 
@@ -97,19 +99,70 @@ class GmailService(GoogleBaseService):
         )
         return result
 
+    def _headers_to_dict(self, headers):
+        headers_as_dict = {
+            h["name"]: h["value"] for h in headers
+        }
+        return headers_as_dict
+
     # ----- Trigger: New Emails -----
 
     def fetch_new_emails(self, client, limit, since):
-        response = client.users().messages().list(userId="me", maxResults=limit).execute()
-        print(response)
-        return response["messages"]
-
+        list_response = client.users().messages().list(
+            userId="me", 
+            maxResults=limit,
+            includeSpamTrash=False,
+            labelIds=["INBOX", "IMPORTANT"]
+            ).execute()
+        messages = []
+        for message in list_response["messages"]:
+            message_response = client.users().messages().get(
+                userId="me",
+                id=message["id"],
+                format="full"
+            ).execute()
+            messages.append(message_response)
+        return messages    
+        
     def normalize_new_email(self, payload):
+        print(json.dumps(payload, indent=3))
+        headers = {
+            h["name"].lower(): h["value"] for h in payload["payload"]["headers"]
+        }
         return {
             # "response_id": payload["responseId"],
             # "submitted_at": payload["timestamp"],
-            "id": payload["id"],
+            "source_id": payload["id"],
+            "received_at": payload["internalDate"],
+            "subject": headers.get("subject"),
+            "sender": headers.get("from"),
+            "snippet": payload["snippet"],
+            "labelIds": payload["labelIds"]
         }
+
+    def apply_filters(self, items, config):
+        filtered_items = items
+
+        if "label" in config:
+            filtered_items = [
+                item for item in filtered_items
+                if config["label"] in item.get("labelIds", [])
+            ]
+        
+        if "from_email" in config:
+            filtered_items = [
+                item for item in filtered_items
+                if parseaddr(self._headers_to_dict(item["payload"]["headers"]).get("From", ""))[1].lower() == config["from_email"].lower()
+            ]
+
+        if "subject_contains" in config:
+            filtered_items = [
+                item for item in filtered_items
+                if config["subject_contains"].lower() in self._headers_to_dict(item["payload"]["headers"]).get("Subject")
+            ]
+
+        return filtered_items
+
 
     def sample_new_email(self):
         pass
