@@ -3,9 +3,11 @@ from googleapiclient.discovery import build
 from email.mime.text import MIMEText
 from email.utils import parseaddr
 import base64, json
+from datetime import datetime, timezone
 
 from .base import GoogleBaseService
 from integrations.registry import register_integration
+from core.events.factory import build_event
 
 
 @register_integration
@@ -125,20 +127,35 @@ class GmailService(GoogleBaseService):
         return messages    
         
     def normalize_new_email(self, payload):
-        print(json.dumps(payload, indent=3))
         headers = {
             h["name"].lower(): h["value"] for h in payload["payload"]["headers"]
         }
-        return {
-            # "response_id": payload["responseId"],
-            # "submitted_at": payload["timestamp"],
-            "source_id": payload["id"],
-            "received_at": payload["internalDate"],
-            "subject": headers.get("subject"),
-            "sender": headers.get("from"),
-            "snippet": payload["snippet"],
-            "labelIds": payload["labelIds"]
-        }
+
+        return build_event(
+            integration="gmail",
+            trigger="new_email",
+            source_id=payload["id"],
+            occurred_at=datetime.fromtimestamp(
+                int(payload["internalDate"]) / 1000,
+                tz=timezone.utc
+            ),
+            data={
+                "subject": headers.get("subject"),
+                "sender": headers.get("from"),
+                "snippet": payload["snippet"]
+            },
+            raw=payload
+        )
+        # return {
+        #     # "response_id": payload["responseId"],
+        #     # "submitted_at": payload["timestamp"],
+        #     "source_id": payload["id"],
+        #     "received_at": payload["internalDate"],
+        #     "subject": headers.get("subject"),
+        #     "sender": headers.get("from"),
+        #     "snippet": payload["snippet"],
+        #     "labelIds": payload["labelIds"]
+        # }
 
     def apply_filters(self, items, config):
         filtered_items = items

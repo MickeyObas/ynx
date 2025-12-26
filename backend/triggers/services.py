@@ -41,9 +41,18 @@ class WebhookTriggerExecutor:
             sample = getattr(service, trigger["sample_event"])()
             return [sample]
 
-        event = getattr(service, trigger["normalize"])
+        event = getattr(service, trigger["normalize"])(payload)
         return [event]
 
+def serialize_event(event):
+    return {
+        "id": event.id,
+        "integration": event.integration,
+        "trigger": event.trigger,
+        "source_id": event.source_id,
+        "occurred_at": event.occurred_at.isoformat(),
+        "data": event.data,
+    }
 
 def resolve_trigger_executor(trigger_definition):
     if trigger_definition.get("type") == "poll":
@@ -63,7 +72,7 @@ def run_trigger_test(*, service, trigger_key, trigger_instance, connection):
             "success": False,
             "message": "This trigger cannot be tested",
             "sample_event": None,
-            "raw_events": [],
+            "events": [],
         }
 
     executor = resolve_trigger_executor(trigger_definition)
@@ -75,7 +84,7 @@ def run_trigger_test(*, service, trigger_key, trigger_instance, connection):
             connection=connection,
             trigger_instance=trigger_instance,
             mode="test",
-            limit=200
+            limit=10
         )
     except Exception as e:
         traceback.print_exc()
@@ -83,7 +92,7 @@ def run_trigger_test(*, service, trigger_key, trigger_instance, connection):
             "success": False,
             "message": str(e),
             "sample_event": None,
-            "raw_events": [],
+            "events": [],
         }
 
     if not events:
@@ -94,8 +103,10 @@ def run_trigger_test(*, service, trigger_key, trigger_instance, connection):
             "occurred_at": timezone.now(),
             "message": "No events found yet",
             "sample_event": None,
-            "raw_events": [],
+            "events": [],
         }
+
+    serialized_events = [serialize_event(event) for event in events]
 
     return {
         "integration": trigger_instance.integration.id,
@@ -103,6 +114,6 @@ def run_trigger_test(*, service, trigger_key, trigger_instance, connection):
         "success": True,
         "occurred_at": timezone.now(),
         "message": "Trigger tested successfully",
-        "sample_event": events[0],
-        "raw_events": events,
+        "sample_event": serialized_events[0],
+        "events": serialized_events,
     }

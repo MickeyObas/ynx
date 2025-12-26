@@ -23,4 +23,5 @@ def test_trigger(request, pk):
     trigger.save()
     if not result.get("success"):
         return Response(result, status=400)
+    # print("RESULT -----> ", result)
     return Response(result)
