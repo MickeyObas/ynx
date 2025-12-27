@@ -1,20 +1,23 @@
 from typing import Any, Dict
+from datetime import datetime
 from django.conf import settings
+from django.utils import timezone
+
 from .base import BaseIntegrationService, GoogleBaseService
 from integrations.registry import register_integration
-
-import requests
-import json
-import urllib.parse
+from core.events.factory import build_event
 
 
 @register_integration
 class GoogleFormsService(GoogleBaseService):
+    SCOPES = [
+        "https://www.googleapis.com/auth/forms.body.readonly",
+        "https://www.googleapis.com/auth/forms.responses.readonly"
+    ]
+
     id = "google_forms"
     name = "Google Forms"
     description = "Connect to Google Forms to receive responses."
-    oauth_enabled = True
-    webhook_supported = True
 
     TRIGGERS = {
         "new_response": {
@@ -39,10 +42,7 @@ class GoogleFormsService(GoogleBaseService):
 
     @classmethod
     def get_scopes(cls) -> list[str]:
-        return [
-            "https://www.googleapis.com/auth/forms.body.readonly",
-            "https://www.googleapis.com/auth/forms.responses.readonly"
-        ]
+        return cls.SCOPES
     
     def perform_action(self, action_id, connection, payload):
         return super().perform_action(action_id, connection, payload)
@@ -54,17 +54,43 @@ class GoogleFormsService(GoogleBaseService):
     # ----- Trigger: New Response -----
 
     def normalize_new_response(self, payload):
-        return {
-            "response_id": payload["responseId"],
-            "submitted_at": payload["timestamp"],
-            "answers": payload["answers"],
-        }
+        return build_event(
+            integration="google_forms",
+            trigger="new_response",
+            source_id=payload["id"],
+            occurred_at=datetime.fromtimestamp(
+                int(payload["createTime"]) / 1000,
+                tz=timezone.utc
+            ),
+            data={
+                "response_id": payload["responseId"],
+                "submitted_at": payload["createTime"],
+                "answers": payload["answers"]
+                },
+            raw=payload
+        )
 
     def sample_new_response(self):
-        return {
-            "response_id": "test_123",
-            "submitted_at": "2025-01-01T12:00:00Z",
-            "answers": {
-                "Email": "test@example.com"
+        return build_event(
+            integration="google_forms",
+            trigger="new_response",
+            source_id="response_id_1010101010",
+            occurred_at=datetime.now(),
+            data={
+                "response_id": "response_id_1010101010",
+                "submitted_at": datetime.now(),
+                "answers": {
+                    "Question": "This is some random answer to some random question."
+                }
+            },
+            raw={
+                "formId": "form_id_1010101010",
+                "responseId": "response_id_1010101010",
+                "createTime": datetime.now(),
+                "lastSubmittedTime": datetime.now(),
+                "respondentEmail": "randomperson@email.com",
+                "answers": {
+                    "Question": "This is some random answer to some random question."
+                }
             }
-        }
+        )

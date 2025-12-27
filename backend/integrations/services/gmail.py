@@ -146,16 +146,6 @@ class GmailService(GoogleBaseService):
             },
             raw=payload
         )
-        # return {
-        #     # "response_id": payload["responseId"],
-        #     # "submitted_at": payload["timestamp"],
-        #     "source_id": payload["id"],
-        #     "received_at": payload["internalDate"],
-        #     "subject": headers.get("subject"),
-        #     "sender": headers.get("from"),
-        #     "snippet": payload["snippet"],
-        #     "labelIds": payload["labelIds"]
-        # }
 
     def apply_filters(self, items, config):
         filtered_items = items
@@ -179,7 +169,6 @@ class GmailService(GoogleBaseService):
             ]
 
         return filtered_items
-
 
     def sample_new_email(self):
         pass
