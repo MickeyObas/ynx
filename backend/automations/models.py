@@ -199,7 +199,6 @@ class Task(TimeStampedModel):
     execution = models.ForeignKey(Execution, on_delete=models.CASCADE, related_name="tasks")
     step = models.ForeignKey(Step, null=True, blank=True, on_delete=models.SET_NULL)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.QUEUED, db_index=True)
-    # input/output snapshots (be mindful of size)
     input_payload = models.JSONField(default=dict)
     output_payload = models.JSONField(null=True, blank=True)
     error = models.TextField(null=True, blank=True)

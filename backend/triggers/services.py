@@ -3,6 +3,7 @@ import traceback
 
 from django.utils import timezone
 
+
 class PollingTriggerExecutor:
     def run(self, *, service, trigger_key, trigger_instance, connection, payload=None, mode="test", limit=5):
         trigger = service.TRIGGERS[trigger_key]
@@ -62,7 +63,6 @@ def resolve_trigger_executor(trigger_definition):
         return WebhookTriggerExecutor()
 
     raise ValueError("Unknown trigger type")
-
 
 def run_trigger_test(*, service, trigger_key, trigger_instance, connection):
     trigger_definition = service.TRIGGERS[trigger_key]

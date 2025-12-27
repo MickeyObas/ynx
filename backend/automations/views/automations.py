@@ -46,7 +46,6 @@ class AutomationViewSet(viewsets.ModelViewSet):
         serializer.save(automation=automation)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-
     @action(detail=True, methods=["put"], url_path=r"triggers/(?P<trigger_id>[^/.]+)")
     def update_trigger(self, request, workspace_pk=None, pk=None, trigger_id=None):
         """Update an existing trigger for this automation."""
