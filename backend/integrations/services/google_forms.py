@@ -48,8 +48,8 @@ class GoogleFormsService(GoogleBaseService):
         return super().perform_action(action_id, connection, payload)
     
     def connect(self, config, secrets) -> Dict[str, Any]:
-         print("I AM CONNECTING!!!!")
-         return self.exchange_code(secrets["authorization_code"])
+        print("I AM CONNECTING!!!!")
+        return self.exchange_code(secrets["authorization_code"])
     
     # ----- Trigger: New Response -----
 

@@ -4,6 +4,9 @@ from email.mime.text import MIMEText
 from email.utils import parseaddr
 import base64, json
 from datetime import datetime, timezone
+from email.mime.multipart import MIMEMultipart
+from google.auth.exceptions import RefreshError
+
 
 from .base import GoogleBaseService
 from integrations.registry import register_integration
@@ -63,8 +66,49 @@ class GmailService(GoogleBaseService):
 
     ACTIONS = {
         "send_email": {
+            "key": "send_email",
             "name": "Send Email",
-            "description": "Send an email message"
+            "description": "Send an email message via Gmail",
+            "category": "messaging",
+
+            "config_schema": {
+                "to": {
+                    "type": "string",
+                    "label": "Recipient Email",
+                    "required": True,
+                    "placeholder": "recipient@example.com",
+                    "description": "Email address of the recipient"
+                },
+                "subject": {
+                    "type": "string",
+                    "label": "Subject",
+                    "required": True,
+                    "placeholder": "Hello from Automation"
+                },
+                "body": {
+                    "type": "text",
+                    "label": "Email Body",
+                    "required": True,
+                    "placeholder": "Write your message here"
+                },
+                "cc": {
+                    "type": "string",
+                    "label": "CC",
+                    "required": False,
+                    "placeholder": "cc@example.com"
+                },
+                "bcc": {
+                    "type": "string",
+                    "label": "BCC",
+                    "required": False,
+                    "placeholder": "bcc@example.com"
+                }
+            },
+            "sample_config": {
+                "to": "test@example.com",
+                "subject": "Test Email",
+                "body": "This is a test email from the automation system"
+            }
         }
     }
 
@@ -86,20 +130,6 @@ class GmailService(GoogleBaseService):
 
     def connect(self, config, secrets) -> Dict[str, Any]:
         return self.exchange_code(secrets["authorization_code"])
-
-    def send_email(self, connection, payload):
-        message = MIMEText(payload.body)
-        message["to"] = payload.to
-        message["subject"] = payload.subject
-        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
-
-        result = (
-            self.service.users()
-            .messages()
-            .send(userId="me", body={"raw": raw})
-            .execute()
-        )
-        return result
 
     def _headers_to_dict(self, headers):
         headers_as_dict = {
@@ -172,3 +202,60 @@ class GmailService(GoogleBaseService):
 
     def sample_new_email(self):
         pass
+
+
+    # ----- Action: Send Email -----
+    def send_email(self, *, config, connection, event=None, mode="live"):
+        """
+        Execute Gmail 'send_email' action.
+
+        config: validated action config
+        connection: OAuth credentials / token object
+        event: triggering event payload (optional)
+        mode: 'test' or 'live'
+        """
+        
+        to_email = config["to"]
+        subject = config["subject"]
+        body = config["body"]
+        cc = config.get("cc")
+        bcc = config.get("bcc")
+
+        message = MIMEMultipart()
+        message["To"] = to_email
+        message["Subject"] = subject
+
+        if cc:
+            message["Cc"] = cc
+        if bcc:
+            message["Bcc"] = bcc
+
+        message.attach(MIMEText(body, "plain"))
+
+        raw_message = base64.urlsafe_b64encode(
+            message.as_bytes()
+        ).decode("utf-8")
+
+        client = self.get_client(connection)
+
+        if mode == "test":
+            return {
+                "status": "skipped",
+                "reason": "Test mode",
+                "to": to_email,
+                "subject": subject
+            }
+
+        try:
+            response = client.users().messages().send(
+                userId="me",
+                body={"raw": raw_message}
+            ).execute()
+        # Catch specific error/exception
+        except RefreshError:
+            raise Exception("Gmail connection expired. Re-authentication required.")
+
+        return {
+            "status": "sent",
+            "message_id": response.get("id")
+        }

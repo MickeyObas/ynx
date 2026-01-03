@@ -156,6 +156,14 @@ class Step(TimeStampedModel):
         ordering = ["order"]
 
 
+class EventRecord(models.Model):
+    service = models.CharField(max_length=60)
+    # type = models.CharField(max_length=50)
+    payload = models.JSONField()
+    occurred_at = models.DateTimeField(auto_now_add=True)
+    processed = models.BooleanField(default=False)
+
+
 class Execution(TimeStampedModel):
     """
     Represents a single run of an Automation triggered by an event.
