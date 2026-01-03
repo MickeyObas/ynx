@@ -181,8 +181,9 @@ class GoogleBaseService(BaseIntegrationService):
 
     def build_credentials(self) -> Credentials:
         """Builds a google Credentials object from stored secrets."""
-        if not self.secrets:
-            raise RuntimeError("Connection secrets are missing. User must reconnect.")
+        # NOTE: Enforcing this causes a bug where rightfully minimal connections are halted (no secrets at this point). Fix logic for enforcement.
+        # if not self.secrets:
+        #     raise RuntimeError("Connection secrets are missing. User must reconnect.")
         
         return Credentials(
             token=self.secrets.get("access_token"),
