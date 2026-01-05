@@ -5,7 +5,8 @@ from django.utils import timezone
 
 
 class PollingTriggerExecutor:
-    def run(self, *, service, trigger_key, trigger_instance, connection, payload=None, mode="test", limit=5):
+    def run(self, *, service, trigger_key, trigger_instance, connection, payload=None, mode="test", since_cursor, limit):
+        service.bind_trigger_instance(trigger_instance)
         trigger = service.TRIGGERS[trigger_key]
         client = service.get_client(connection)
         since = None
@@ -14,15 +15,15 @@ class PollingTriggerExecutor:
 
         raw_items = getattr(service, trigger["fetch"])(
             client=client,
-            since=since,
+            since_cursor=since,
             limit=limit
         )
 
-        filtered = getattr(service, trigger["apply_filters"])(raw_items, trigger_instance.config)
+        # filtered = getattr(service, trigger["apply_filters"])(raw_items, trigger_instance.config)
 
         events = [
             getattr(service, trigger["normalize"])(item)
-            for item in filtered
+            for item in raw_items
         ]
 
         if mode == "live" and events:
@@ -35,7 +36,7 @@ class PollingTriggerExecutor:
     
 
 class WebhookTriggerExecutor:
-    def run(self, *, service, trigger_key, connection=None, trigger_instance=None, payload=None, mode="live", limit=None):
+    def run(self, *, service, trigger_key, connection=None, trigger_instance=None, payload=None, mode="live", since_cursor=None, limit=None):
         trigger = service.TRIGGERS[trigger_key]
 
         if mode == "test":
@@ -84,6 +85,8 @@ def run_trigger_test(*, service, trigger_key, trigger_instance, connection):
             connection=connection,
             trigger_instance=trigger_instance,
             mode="test",
+            # TODO: Use appropriate cursor
+            since_cursor=None,
             limit=10
         )
     except Exception as e:

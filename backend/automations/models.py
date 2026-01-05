@@ -158,7 +158,7 @@ class Step(TimeStampedModel):
 
 class EventRecord(models.Model):
     service = models.CharField(max_length=60)
-    # type = models.CharField(max_length=50)
+    type = models.CharField(max_length=50)
     payload = models.JSONField()
     occurred_at = models.DateTimeField(auto_now_add=True)
     processed = models.BooleanField(default=False)

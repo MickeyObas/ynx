@@ -23,7 +23,7 @@ class GoogleFormsService(GoogleBaseService):
         "new_response": {
             "name": "New Response",
             "description": "Triggered when a new response on a form is received",
-            "type": "webhook",
+            "type": "poll",
             "is_testable": True,
             "config_schema": {
                 "form_id": {
@@ -52,6 +52,30 @@ class GoogleFormsService(GoogleBaseService):
         return self.exchange_code(secrets["authorization_code"])
     
     # ----- Trigger: New Response -----
+    def fetch_new_responses(self, client, *, since_cursor, limit):
+
+        form_id = self.trigger_instance.config["form_id"]
+
+        response = client.forms().responses().list(
+            formId=form_id,
+            pageSize=limit,
+        ).execute()
+
+        items = []
+
+        for item in response.get("responses", []):
+            submitted_at = item["lastSubmittedTime"]
+
+            occurred_at = datetime.fromisoformat(
+                submitted_at.replace("Z", "+00:00")
+            )
+
+            if since_cursor and occurred_at <= since_cursor:
+                continue
+
+            items.append(item)
+
+        return items
 
     def normalize_new_response(self, payload):
         return build_event(

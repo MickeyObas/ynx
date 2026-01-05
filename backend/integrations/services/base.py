@@ -98,6 +98,9 @@ class BaseIntegrationService(ABC):
     def get_auth_url(self, **kwargs):
         pass
 
+    def bind_trigger_instance(self, trigger_instance):
+        self.trigger_instance = trigger_instance
+
     @classmethod
     def as_dict(cls):
         return {

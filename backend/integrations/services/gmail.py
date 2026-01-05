@@ -31,24 +31,6 @@ class GmailService(GoogleBaseService):
             "type": "poll",
             "is_testable": True,
             "config_schema": {
-                "label": {
-                    "type": "string",
-                    "label": "Gmail Label",
-                    "required": False,
-                    "help_text": "Only trigger for emails with this Gmail label (e.g. INBOX, UNREAD, STARRED). Leave empty for all emails."
-                },
-                "from_email": {
-                    "type": "string",
-                    "label": "From Email",
-                    "required": False,
-                    "help_text": "Only trigger when the email is sent from this address."
-                },
-                "subject_contains": {
-                    "type": "string",
-                    "label": "Subject Contains",
-                    "required": False,
-                    "help_text": "Only trigger when the email subject contains this text."
-                },
                 "include_attachments": {
                     "type": "boolean",
                     "label": "Include Attachments",
@@ -59,8 +41,7 @@ class GmailService(GoogleBaseService):
             },
             "fetch": "fetch_new_emails",
             "normalize": "normalize_new_email",
-            "sample_event": "sample_new_email",
-            "apply_filters": "apply_filters"
+            "sample_event": "sample_new_email"
         }
     }
 
@@ -139,23 +120,41 @@ class GmailService(GoogleBaseService):
 
     # ----- Trigger: New Emails -----
 
-    def fetch_new_emails(self, client, limit, since):
-        list_response = client.users().messages().list(
-            userId="me", 
+    def fetch_new_emails(self, client, *, since_cursor, limit):
+        response = client.users().messages().list(
+            userId="me",
             maxResults=limit,
+            labelIds=["INBOX"],
             includeSpamTrash=False,
-            labelIds=["INBOX", "IMPORTANT"]
-            ).execute()
+        ).execute()
+
         messages = []
-        for message in list_response["messages"]:
-            message_response = client.users().messages().get(
+
+        for item in response.get("messages", []):
+            message_id = item["id"]
+
+            metadata = client.users().messages().get(
                 userId="me",
-                id=message["id"],
-                format="full"
+                id=message_id,
+                format="metadata",
+                metadataHeaders=["Date"],
             ).execute()
-            messages.append(message_response)
-        return messages    
-        
+
+            internal_date = int(metadata["internalDate"])
+
+            if since_cursor and internal_date <= since_cursor:
+                continue
+
+            full_message = client.users().messages().get(
+                userId="me",
+                id=message_id,
+                format="full",
+            ).execute()
+
+            messages.append(full_message)
+
+        return messages
+    
     def normalize_new_email(self, payload):
         headers = {
             h["name"].lower(): h["value"] for h in payload["payload"]["headers"]
@@ -176,29 +175,6 @@ class GmailService(GoogleBaseService):
             },
             raw=payload
         )
-
-    def apply_filters(self, items, config):
-        filtered_items = items
-
-        if "label" in config:
-            filtered_items = [
-                item for item in filtered_items
-                if config["label"] in item.get("labelIds", [])
-            ]
-        
-        if "from_email" in config:
-            filtered_items = [
-                item for item in filtered_items
-                if parseaddr(self._headers_to_dict(item["payload"]["headers"]).get("From", ""))[1].lower() == config["from_email"].lower()
-            ]
-
-        if "subject_contains" in config:
-            filtered_items = [
-                item for item in filtered_items
-                if config["subject_contains"].lower() in self._headers_to_dict(item["payload"]["headers"]).get("Subject")
-            ]
-
-        return filtered_items
 
     def sample_new_email(self):
         pass
