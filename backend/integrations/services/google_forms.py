@@ -1,4 +1,5 @@
 from typing import Any, Dict
+from googleapiclient.discovery import build
 from datetime import datetime
 from django.conf import settings
 from django.utils import timezone
@@ -33,6 +34,7 @@ class GoogleFormsService(GoogleBaseService):
                     "help_text": "The ID of the Google Form to watch."
                 }
             },
+            "fetch": "fetch_new_responses",
             "normalize": "normalize_new_response",
             "sample_event": "sample_new_response",
         }
@@ -43,16 +45,21 @@ class GoogleFormsService(GoogleBaseService):
     @classmethod
     def get_scopes(cls) -> list[str]:
         return cls.SCOPES
+
+    def build_client(self, credentials):
+        return build("forms", "v1", credentials=credentials)
     
     def perform_action(self, action_id, connection, payload):
         return super().perform_action(action_id, connection, payload)
     
     def connect(self, config, secrets) -> Dict[str, Any]:
-        print("I AM CONNECTING!!!!")
         return self.exchange_code(secrets["authorization_code"])
     
-    # ----- Trigger: New Response -----
+    # ----- Trigger: New Responses -----
     def fetch_new_responses(self, client, *, since_cursor, limit):
+        """
+        Fetch new Google Form responses since the last cursor.
+        """
 
         form_id = self.trigger_instance.config["form_id"]
 
@@ -61,34 +68,30 @@ class GoogleFormsService(GoogleBaseService):
             pageSize=limit,
         ).execute()
 
-        items = []
+        new_responses = []
 
         for item in response.get("responses", []):
-            submitted_at = item["lastSubmittedTime"]
-
-            occurred_at = datetime.fromisoformat(
-                submitted_at.replace("Z", "+00:00")
+            
+            submitted_at = datetime.fromisoformat(
+                item["lastSubmittedTime"].replace("Z", "+00:00")
             )
 
-            if since_cursor and occurred_at <= since_cursor:
+            if since_cursor and submitted_at <= since_cursor:
                 continue
 
-            items.append(item)
+            new_responses.append(item)
 
-        return items
+        return new_responses
 
     def normalize_new_response(self, payload):
         return build_event(
             integration="google_forms",
             trigger="new_response",
-            source_id=payload["id"],
-            occurred_at=datetime.fromtimestamp(
-                int(payload["createTime"]) / 1000,
-                tz=timezone.utc
+            source_id=payload["responseId"],
+            occurred_at=datetime.fromisoformat(
+                payload["lastSubmittedTime"].replace("Z", "+00:00")
             ),
             data={
-                "response_id": payload["responseId"],
-                "submitted_at": payload["createTime"],
                 "answers": payload["answers"]
                 },
             raw=payload
@@ -117,4 +120,4 @@ class GoogleFormsService(GoogleBaseService):
                     "Question": "This is some random answer to some random question."
                 }
             }
-        )
+        )    

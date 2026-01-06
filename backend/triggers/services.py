@@ -120,3 +120,26 @@ def run_trigger_test(*, service, trigger_key, trigger_instance, connection):
         "sample_event": serialized_events[0],
         "events": serialized_events,
     }
+
+def event_matches_trigger(event, trigger_instance):
+    config = trigger_instance.config or {}
+
+    for field, expected in config.items():
+        actual = event.data.get(field)
+
+        if actual is None:
+            return False
+
+        if isinstance(expected, str):
+            if expected.lower() not in str(actual).lower():
+                return False
+
+        elif isinstance(expected, bool):
+            if actual is not expected:
+                return False
+
+        else:
+            if actual != expected:
+                return False
+
+    return True

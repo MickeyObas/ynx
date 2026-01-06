@@ -128,7 +128,7 @@ class Trigger(TimeStampedModel):
     last_run_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.type} trigger for {self.automation.id}"
+        return f"{self.type} trigger for {self.automation.id} ({self.integration.id})"
     
 
 class Step(TimeStampedModel):

@@ -119,7 +119,6 @@ class GmailService(GoogleBaseService):
         return headers_as_dict
 
     # ----- Trigger: New Emails -----
-
     def fetch_new_emails(self, client, *, since_cursor, limit):
         response = client.users().messages().list(
             userId="me",
