@@ -8,6 +8,7 @@ from api.models import TimeStampedModel
 
 User = get_user_model()
 
+
 class Workspace(TimeStampedModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200)

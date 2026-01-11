@@ -1,5 +1,4 @@
 from automations.models import Automation
-from triggers.services import event_matches_trigger
 
 
 # NOTE: Might bundle into a class later idk
@@ -8,6 +7,8 @@ def process_events(events):
         handle_event(event)
 
 def handle_event(event):
+    from triggers.services import event_matches_trigger
+
     automations = Automation.objects.filter(
         integration=event.integration,
         trigger=event.trigger

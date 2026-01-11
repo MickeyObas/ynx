@@ -2,7 +2,8 @@ from integrations.registry import INTEGRATION_REGISTRY
 import traceback
 
 from django.utils import timezone
-
+from automations.engine import process_events
+from automations.models import Trigger, Automation
 
 class PollingTriggerExecutor:
     def run(self, *, service, trigger_key, trigger_instance, connection, payload=None, mode="test", since_cursor, limit):
@@ -143,3 +144,31 @@ def event_matches_trigger(event, trigger_instance):
                 return False
 
     return True
+
+def poll_triggers():
+    trigger_instances = Trigger.objects.filter(
+        status="active",
+        type="poll"
+    )
+    for trigger_instance in trigger_instances:
+        try:
+            run_trigger_live(trigger_instance)
+        except Exception as e:
+            print(e)
+
+def run_trigger_live(trigger_instance):
+    service = INTEGRATION_REGISTRY[trigger_instance]
+    trigger_definition = service.TRIGGERS[trigger_instance.trigger_key]
+    executor = resolve_trigger_executor(trigger_definition)
+
+    events = executor.run(
+        service=service,
+        trigger_key=trigger_instance.trigger_key,
+        connection=trigger_instance.connection,
+        trigger_instance=trigger_instance,
+        mode="live",
+        since_cursor=trigger_instance.last_run_at,
+        limit=50
+    )
+
+    process_events(events)
