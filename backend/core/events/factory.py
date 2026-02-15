@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 def build_event(*, integration, trigger, source_id, data, raw, occurred_at):
     return Event(
-        id=f"evt_{uuid.uuid4()}",
+        event_id=f"evt_{uuid.uuid4()}",
         integration=integration,
         trigger=trigger,
         source_id=source_id,

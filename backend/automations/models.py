@@ -158,12 +158,24 @@ class Step(TimeStampedModel):
 
 
 class EventRecord(models.Model):
-    service = models.CharField(max_length=60)
+    event_id = models.CharField(max_length=100, unique=True, db_index=True)
+    external_id = models.CharField(max_length=512)
+    integration = models.CharField(max_length=100)
+    trigger = models.CharField(max_length=100)
     type = models.CharField(max_length=50)
     payload = models.JSONField()
-    occurred_at = models.DateTimeField(auto_now_add=True)
+    occurred_at = models.DateTimeField()
+    recorded_at = models.DateTimeField(auto_now_add=True)
     processed = models.BooleanField(default=False)
+    processed_at = models.DateTimeField(null=True, blank=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["integration", "external_id"],
+                name="unique_event_from_source"
+            )
+        ]
 
 class Execution(TimeStampedModel):
     """

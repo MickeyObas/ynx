@@ -1,9 +1,12 @@
 from integrations.registry import INTEGRATION_REGISTRY
 import traceback
+from datetime import datetime, timezone
 
 from django.utils import timezone
+from django.db import IntegrityError, transaction
 from automations.engine import process_events
-from automations.models import Trigger, Automation
+from automations.models import Trigger, Automation, EventRecord
+
 
 class PollingTriggerExecutor:
     def run(self, *, service, trigger_key, trigger_instance, connection, payload=None, mode="test", since_cursor, limit):
@@ -20,8 +23,6 @@ class PollingTriggerExecutor:
             limit=limit
         )
 
-        # filtered = getattr(service, trigger["apply_filters"])(raw_items, trigger_instance.config)
-
         events = [
             getattr(service, trigger["normalize"])(item)
             for item in raw_items
@@ -29,7 +30,7 @@ class PollingTriggerExecutor:
 
         if mode == "live" and events:
             trigger_instance.last_run_at = max(
-                e["occured_at"] for e in events
+                e.occurred_at for e in events
             )
             trigger_instance.save(update_fields=["last_run_at"])
 
@@ -49,7 +50,7 @@ class WebhookTriggerExecutor:
 
 def serialize_event(event):
     return {
-        "id": event.id,
+        "id": event.event_id,
         "integration": event.integration,
         "trigger": event.trigger,
         "source_id": event.source_id,
@@ -109,6 +110,8 @@ def run_trigger_test(*, service, trigger_key, trigger_instance, connection):
             "sample_event": None,
             "events": [],
         }
+    
+    # TODO: Add event condition matching logic
 
     serialized_events = [serialize_event(event) for event in events]
 
@@ -126,14 +129,18 @@ def event_matches_trigger(event, trigger_instance):
     config = trigger_instance.config or {}
 
     for field, expected in config.items():
-        actual = event.data.get(field)
+        actual = event.payload.get(field)
 
         if actual is None:
+            print(f"Actual is NONE for {field}")
             return False
 
         if isinstance(expected, str):
             if expected.lower() not in str(actual).lower():
+                print(f"{expected} is not {actual}. ID: {event.event_id}")
                 return False
+            else:
+                print("String field matches!!")
 
         elif isinstance(expected, bool):
             if actual is not expected:
@@ -141,23 +148,18 @@ def event_matches_trigger(event, trigger_instance):
 
         else:
             if actual != expected:
+                print(f"{actual} != {expected}")
                 return False
+
+    print("MATCH FOUND")
 
     return True
 
-def poll_triggers():
-    trigger_instances = Trigger.objects.filter(
-        status="active",
-        type="poll"
-    )
-    for trigger_instance in trigger_instances:
-        try:
-            run_trigger_live(trigger_instance)
-        except Exception as e:
-            print(e)
-
 def run_trigger_live(trigger_instance):
-    service = INTEGRATION_REGISTRY[trigger_instance]
+    print("This is RUN TRIGGER LIVE")
+    print("This is the trigger instance ---> ", trigger_instance)
+    # NOTE: Trigger should be configured with necessary question. This means I should probably enforce connection existence before activating trigger
+    service = INTEGRATION_REGISTRY[trigger_instance.integration.id](trigger_instance.connection)
     trigger_definition = service.TRIGGERS[trigger_instance.trigger_key]
     executor = resolve_trigger_executor(trigger_definition)
 
@@ -170,5 +172,23 @@ def run_trigger_live(trigger_instance):
         since_cursor=trigger_instance.last_run_at,
         limit=50
     )
-
+    print("EVENTS FAPPED. ABOUT TO PROCESS EVENTS!!")
     process_events(events)
+
+
+def persist_event(raw_event):
+    try:
+        with transaction.atomic():
+            return EventRecord.objects.create(
+                event_id=raw_event.event_id,
+                external_id=raw_event.source_id,
+                integration=raw_event.integration,
+                trigger=raw_event.trigger,
+                payload=raw_event.data,
+                occurred_at=raw_event.occurred_at,
+            )
+    except IntegrityError:
+        return EventRecord.objects.get(
+            integration=raw_event.integration,
+            external_id=raw_event.source_id
+        )

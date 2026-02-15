@@ -19,3 +19,11 @@ worker_prefetch_multiplier = 1
 # Retry defaults
 task_default_retry_delay = 30
 task_max_retries = 5
+
+# Beat schedule
+beat_schedule = {
+    "poll-triggers-every-minute": {
+        "task": 'triggers.tasks.poll_triggers_task',
+        "schedule": 30.0
+    }
+}

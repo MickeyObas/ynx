@@ -4,7 +4,7 @@ from typing import Any, Dict
 
 @dataclass
 class Event:
-    id: str
+    event_id: str
     integration: str
     trigger: str
     source_id: str

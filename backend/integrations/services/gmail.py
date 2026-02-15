@@ -3,7 +3,7 @@ from googleapiclient.discovery import build
 from email.mime.text import MIMEText
 from email.utils import parseaddr
 import base64, json
-from datetime import datetime, timezone
+from datetime import datetime, timezone as p_timezone
 from email.mime.multipart import MIMEMultipart
 from google.auth.exceptions import RefreshError
 
@@ -31,6 +31,13 @@ class GmailService(GoogleBaseService):
             "type": "poll",
             "is_testable": True,
             "config_schema": {
+                "sender": {
+                    "type": "string",
+                    "label": "Sender",
+                    "required": True,
+                    "default": False,
+                    "help_text": "The sender of the email."
+                },
                 "include_attachments": {
                     "type": "boolean",
                     "label": "Include Attachments",
@@ -96,13 +103,16 @@ class GmailService(GoogleBaseService):
     def build_client(self, credentials):
         return build("gmail", "v1", credentials=credentials)
 
-    def perform_action(self, action_id, connection, payload):
+    def perform_action(self, action_id, *, config, connection, context):
         action_map = {
             "send_email": self.send_email
         }
         if action_id not in action_map:
             raise ValueError(f"Unknown action: {action_id}")
-        return action_map[action_id](connection, payload)
+        return action_map[action_id](
+            config=config,
+            connection=connection
+        )
 
     def __init__(self, connection=None):
         super().__init__(connection)
@@ -139,10 +149,12 @@ class GmailService(GoogleBaseService):
                 metadataHeaders=["Date"],
             ).execute()
 
-            internal_date = int(metadata["internalDate"])
-
-            if since_cursor and internal_date <= since_cursor:
-                continue
+            internal_date = datetime.fromtimestamp(
+                int(metadata["internalDate"])/ 1000,
+                tz=p_timezone.utc
+)
+            # if since_cursor and internal_date <= since_cursor:
+            #     continue
 
             full_message = client.users().messages().get(
                 userId="me",
@@ -165,7 +177,7 @@ class GmailService(GoogleBaseService):
             source_id=payload["id"],
             occurred_at=datetime.fromtimestamp(
                 int(payload["internalDate"]) / 1000,
-                tz=timezone.utc
+                tz=p_timezone.utc
             ),
             data={
                 "subject": headers.get("subject"),
