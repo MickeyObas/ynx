@@ -195,6 +195,7 @@ class Execution(TimeStampedModel):
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
     attempt = models.PositiveIntegerField(default=0)  # for retries
+    error = models.TextField(null=True, blank=True)
 
     # meta for metrics/observability (duration, cost)
     meta = models.JSONField(default=dict)

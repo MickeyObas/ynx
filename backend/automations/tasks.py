@@ -1,7 +1,8 @@
 from celery import shared_task
 
-from automations.models import Automation, EventRecord, Step
+from automations.models import Automation, EventRecord, Step, Execution, Task
 
+from django.utils import timezone
 
 @shared_task
 def test_task():
@@ -12,20 +13,72 @@ def run_automation_task(self, automation_id, event_id):
     automation = Automation.objects.get(id=automation_id)
     event = EventRecord.objects.get(event_id=event_id)
 
-    steps = Step.objects.filter(
-        automation=automation
-    ).order_by('order')
+    execution = Execution.objects.create(
+        automation=automation,
+        trigger_event=event.payload,
+        status=Execution.Status.RUNNING,
+        started_at=timezone.now()
+    )
 
+    has_failure = False
     print("NOW RUNNING AUTOMATION!!!")
 
-    context = {
-        "event": event.payload,
-        "step_results": {},
-    }
 
-    for step in steps:
-        result = execute_step(step, context)
-        context["step_results"][str(step.id)] = result
+    try:
+        steps = Step.objects.filter(
+            automation=automation
+        ).order_by('order')
+
+
+        context = {
+            "event": event.payload,
+            "step_results": {},
+        }
+
+        for step in steps:
+            task, created = Task.objects.get_or_create(
+                execution=execution,
+                step=step,
+                defaults={
+                    "input_payload":step.config,
+                    "status": Task.Status.RUNNING,
+                    "started_at": timezone.now()
+                }
+            )
+
+            if task.status == Task.Status.SUCCESS:
+                context["step_results"][str(step.id)] = task.output_payload
+                continue
+
+            try:
+                result = execute_step(step, context)
+                context["step_results"][str(step.id)] = result
+                task.status = Task.Status.SUCCESS
+                task.output_payload = result
+                task.finished_at = timezone.now()
+                task.save()
+
+            except Exception as step_error:
+                task.error = str(step_error)
+                task.status = Task.Status.FAILED
+                task.finished_at = timezone.now()
+                task.save()
+                break
+        
+        execution.status = (
+            Execution.Status.FAILED
+            if has_failure
+            else Execution.Status.SUCCESS
+        )
+
+    except Exception as execution_error:
+        execution.status = Execution.Status.FAILED
+        execution.error = str(execution_error)
+
+    finally:
+        execution.finished_at = timezone.now()
+        execution.save()
+
 
 
 def execute_step(step, context):

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Integration, Connection, Automation, Trigger, Step, EventRecord
+from .models import Integration, Connection, Automation, Trigger, Step, EventRecord, Task, Execution
 
 
 class EventRecordModelAdmin(admin.ModelAdmin):
@@ -23,3 +23,5 @@ admin.site.register(Automation)
 admin.site.register(Trigger)
 admin.site.register(Step)
 admin.site.register(EventRecord, EventRecordModelAdmin)
+admin.site.register(Task)
+admin.site.register(Execution)
