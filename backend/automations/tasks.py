@@ -8,7 +8,14 @@ from django.utils import timezone
 def test_task():
     print("Yep this is working.")
 
-@shared_task(bind=True, autoretry_for=(Exception,), retry_kwargs={"max_retries": 3})
+@shared_task(
+        bind=True, 
+        autoretry_for=(Exception,), 
+        retry_kwargs={"max_retries": 3},
+        retry_backoff=True,
+        retry_backoff_max=60,
+        retry_jitter=True
+    )
 def run_automation_task(self, automation_id, event_id):
     automation = Automation.objects.get(id=automation_id)
     event = EventRecord.objects.get(event_id=event_id)
@@ -59,11 +66,12 @@ def run_automation_task(self, automation_id, event_id):
                 task.save()
 
             except Exception as step_error:
+                has_failure = True
                 task.error = str(step_error)
                 task.status = Task.Status.FAILED
                 task.finished_at = timezone.now()
                 task.save()
-                break
+                raise step_error
         
         execution.status = (
             Execution.Status.FAILED

@@ -25,6 +25,7 @@ def handle_event(event):
     for automation in automations:
         print("Handling an event")
         if event_matches_trigger(event, automation.trigger):
+            # TODO: Create Execution 
             print("Event matches the trigger truly")
             run_automation_task.delay(automation.id, event.event_id)
         else:
