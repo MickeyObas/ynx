@@ -1,6 +1,8 @@
 from celery import shared_task
 from automations.models import Trigger, EventRecord
 
+from requests.exceptions import ConnectionError, Timeout
+
 
 @shared_task
 def poll_triggers_task():
@@ -21,7 +23,11 @@ def handle_event_task(event_id):
     handle_event(event)
 
 
-@shared_task(bind=True, autoretry_for=(Exception,), retry_kwargs={"max_retries": 3})
+@shared_task(
+    bind=True, 
+    autoretry_for=(Exception,),
+    retry_kwargs={"max_retries": 3}
+)
 def run_trigger_task(self, trigger_id):
     from triggers.services import run_trigger_live
     trigger = Trigger.objects.get(id=trigger_id)

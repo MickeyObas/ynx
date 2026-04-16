@@ -1,8 +1,10 @@
 from celery import shared_task
+from requests.exceptions import Timeout
 
 from automations.models import Automation, EventRecord, Step, Execution, Task
 
 from django.utils import timezone
+from django.db import transaction
 
 @shared_task
 def test_task():
@@ -10,26 +12,21 @@ def test_task():
 
 @shared_task(
         bind=True, 
-        autoretry_for=(Exception,), 
+        autoretry_for=(Timeout,), 
         retry_kwargs={"max_retries": 3},
         retry_backoff=True,
         retry_backoff_max=60,
         retry_jitter=True
     )
-def run_automation_task(self, automation_id, event_id):
-    automation = Automation.objects.get(id=automation_id)
+def run_automation_task(self, event_id, execution_id):
+    print(f"Retry attempt: {self.request.retries}")
+
     event = EventRecord.objects.get(event_id=event_id)
+    execution = Execution.objects.get(id=execution_id)
+    automation = execution.automation
 
-    execution = Execution.objects.create(
-        automation=automation,
-        trigger_event=event.payload,
-        status=Execution.Status.RUNNING,
-        started_at=timezone.now()
-    )
-
-    has_failure = False
+    # has_failure = False
     print("NOW RUNNING AUTOMATION!!!")
-
 
     try:
         steps = Step.objects.filter(
@@ -60,28 +57,31 @@ def run_automation_task(self, automation_id, event_id):
             try:
                 result = execute_step(step, context)
                 context["step_results"][str(step.id)] = result
-                task.status = Task.Status.SUCCESS
-                task.output_payload = result
-                task.finished_at = timezone.now()
-                task.save()
+                with transaction.atomic():
+                    task.status = Task.Status.SUCCESS
+                    task.output_payload = result
+                    task.finished_at = timezone.now()
+                    task.save()
 
             except Exception as step_error:
-                has_failure = True
+                # has_failure = True
                 task.error = str(step_error)
                 task.status = Task.Status.FAILED
                 task.finished_at = timezone.now()
                 task.save()
-                raise step_error
+                raise Timeout(str(step_error))
         
-        execution.status = (
-            Execution.Status.FAILED
-            if has_failure
-            else Execution.Status.SUCCESS
-        )
+        # execution.status = (
+        #     Execution.Status.FAILED
+        #     if has_failure
+        #     else Execution.Status.SUCCESS
+        # )
 
     except Exception as execution_error:
-        execution.status = Execution.Status.FAILED
-        execution.error = str(execution_error)
+        if self.request.retries >= self.max_retries:
+            execution.status = Execution.Status.FAILED
+            execution.error = str(execution_error)
+            raise
 
     finally:
         execution.finished_at = timezone.now()

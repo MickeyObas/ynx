@@ -1,4 +1,4 @@
-from automations.models import Automation, EventRecord
+from automations.models import Automation, EventRecord, Execution
 from triggers.tasks import handle_event_task
 from automations.tasks import run_automation_task
 
@@ -26,8 +26,14 @@ def handle_event(event):
         print("Handling an event")
         if event_matches_trigger(event, automation.trigger):
             # TODO: Create Execution 
+            execution = Execution.objects.create(
+                automation=automation,
+                trigger_event=event.payload,
+                status=Execution.Status.RUNNING,
+                started_at=timezone.now()
+            )
             print("Event matches the trigger truly")
-            run_automation_task.delay(automation.id, event.event_id)
+            run_automation_task.delay(event.event_id, execution.id)
         else:
             print("Event does not match the trigger")
 
