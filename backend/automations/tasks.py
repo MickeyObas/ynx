@@ -76,12 +76,14 @@ def run_automation_task(self, event_id, execution_id):
         #     if has_failure
         #     else Execution.Status.SUCCESS
         # )
+        execution.status = Execution.Status.SUCCESS
+        execution.save()
 
     except Exception as execution_error:
         if self.request.retries >= self.max_retries:
             execution.status = Execution.Status.FAILED
             execution.error = str(execution_error)
-            raise
+        raise
 
     finally:
         execution.finished_at = timezone.now()

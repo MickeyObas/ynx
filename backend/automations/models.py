@@ -87,6 +87,7 @@ class Automation(TimeStampedModel):
         PAUSED = "paused", "Paused"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    description = models.TextField(max_length=255, blank=True, null=True)
     workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name="automations")
     name = models.CharField(max_length=255)
     owner = models.ForeignKey(User, on_delete=models.PROTECT, related_name="automations")
@@ -97,6 +98,7 @@ class Automation(TimeStampedModel):
 
     class Meta:
         indexes = [models.Index(fields=["workspace", "status"])]
+        ordering = ["-created_at"]
 
     def __str__(self):
         return self.name

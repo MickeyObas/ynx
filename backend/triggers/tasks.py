@@ -9,7 +9,8 @@ def poll_triggers_task():
     print("RUNNING POLLING TASSKKKKKKKKKKKKKKKK!!!!!!")
     trigger_ids = Trigger.objects.filter(
         status="active",
-        type="poll"
+        type="poll",
+        automation__status="enabled"
     ).values_list('id', flat=True)
 
     for trigger_id in trigger_ids:
