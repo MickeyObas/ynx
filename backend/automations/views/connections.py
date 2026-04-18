@@ -45,10 +45,10 @@ class ConnectionViewset(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         connection = serializer.save()
         service = get_integration_service(connection.integration.id, connection)
-        auth_url = service.get_auth_url(connection.id)
+        # auth_url = service.get_auth_url(connection.id)
         return Response({
             "connection_id": str(connection.id),
-            "auth_url": auth_url
+            # "auth_url": auth_url
         })
     
     def create(self, request, *args, **kwargs):

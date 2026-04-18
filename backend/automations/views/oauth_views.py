@@ -14,16 +14,18 @@ import urllib.parse
 @api_view(["GET"])
 def start_oauth(request, integration_id, workspace_id):
     # service_name = request.query_params.get('service_name')
+    connection_id = request.query_params.get("connection_id")
+    connection = Connection.objects.get(id=connection_id)
 
-    service = get_integration_service(integration_id=integration_id)
+    service = get_integration_service(integration_id=integration_id, connection=connection)
     if not service:
         return Response({"error": "Integration not found"}, status=404)
-    auth_url = service.get_auth_url(workspace_id=str(workspace_id), integration_id=integration_id)
+    auth_url = service.get_auth_url(connection.id)
     return redirect(auth_url)
 
 
 @api_view(["GET"])
-def oauth_callback(request, service_name):
+def oauth_complete(request, service_name):
     code = request.query_params.get("code")
     state = request.query_params.get('state') # connection ID
     connection = None
@@ -58,4 +60,6 @@ def oauth_callback(request, service_name):
     connection.last_tested = timezone.now()
     connection.save(update_fields=["status", "last_tested"])
 
-    return Response(ConnectionSerializer(connection).data, status=201)
+
+    # TODO: Setup FRONTEND URL VAR
+    return redirect("http://localhost:3000/dashboard/integrations?success=1")

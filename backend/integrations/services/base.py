@@ -140,7 +140,7 @@ class GoogleBaseService(BaseIntegrationService):
             scopes=cls.get_scopes(),
             redirect_uri="http://localhost:8000/api/integrations/oauth/google/callback/",
         )
-        state = json.dumps({"connection_id": str(connection_id)})
+        state = json.dumps({"connection_id": str(connection_id), "integration_id": cls.id})
         auth_url, _ = flow.authorization_url(
             access_type="offline", prompt="consent", state=state
         )
