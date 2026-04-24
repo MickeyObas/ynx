@@ -1,6 +1,6 @@
 from .workspace import WorkspaceSerializer, WorkspaceMembershipSerializer
 from .integrations import IntegrationSerializer, IntegrationThinSerializer
-from .automations import AutomationSerializer, TriggerSerializer
+from .automations import AutomationSerializer, TriggerSerializer, ExecutionSerializer
 from .connections import ConnectionSerializer, ConnectionDisplaySerializer
 
 __all__ = [

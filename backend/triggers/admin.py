@@ -1,3 +1,3 @@
 from django.contrib import admin
 
-# Register your models here.
+from automations.models import Trigger

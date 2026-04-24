@@ -40,5 +40,16 @@ def integration_list(request):
 
 @api_view(['GET'])
 def trigger_list(request, integration_id):
+    trigger_type = request.query_params.get("type", None)
+
     service_cls = INTEGRATION_REGISTRY[integration_id]
-    return Response(service_cls.as_dict()["triggers"])
+    triggers = service_cls.as_dict()["triggers"]
+
+    if trigger_type:
+        triggers = {
+            key: value
+            for key, value in triggers.items()
+            if value.get("type") == trigger_type
+        }
+
+    return Response(triggers)

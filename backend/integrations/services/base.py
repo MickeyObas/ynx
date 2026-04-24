@@ -133,14 +133,18 @@ class GoogleBaseService(BaseIntegrationService):
         return cls.SCOPES
 
     @classmethod
-    def get_auth_url(cls, connection_id: str) -> str:
+    def get_auth_url(cls, connection_id: str, context: dict | None = None) -> str:
         """Generate the Google OAuth consent screen URL."""
         flow = Flow.from_client_config(
             cls.GOOGLE_CLIENT_CONFIG,
             scopes=cls.get_scopes(),
             redirect_uri="http://localhost:8000/api/integrations/oauth/google/callback/",
         )
-        state = json.dumps({"connection_id": str(connection_id), "integration_id": cls.id})
+        state = json.dumps({
+            "connection_id": str(connection_id), 
+            "integration_id": cls.id,
+            **(context or {})
+        })
         auth_url, _ = flow.authorization_url(
             access_type="offline", prompt="consent", state=state
         )

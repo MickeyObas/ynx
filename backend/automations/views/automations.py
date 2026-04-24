@@ -4,8 +4,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
-from automations.serializers import AutomationSerializer, TriggerSerializer
-from automations.models import Automation
+from automations.serializers import AutomationSerializer, TriggerSerializer, ExecutionSerializer
+from automations.models import Automation, Execution
 
 
 class AutomationViewSet(viewsets.ModelViewSet):
@@ -46,31 +46,46 @@ class AutomationViewSet(viewsets.ModelViewSet):
         serializer.save(automation=automation)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=["put"], url_path=r"triggers/(?P<trigger_id>[^/.]+)")
-    def update_trigger(self, request, workspace_pk=None, pk=None, trigger_id=None):
-        """Update an existing trigger for this automation."""
+    @action(
+        detail=True,
+        methods=["patch", "delete"],
+        url_path=r"triggers/(?P<trigger_id>[^/.]+)"
+    )
+    def manage_trigger(self, request, workspace_pk=None, pk=None, trigger_id=None):
         automation = self.get_object()
+
         try:
             trigger = automation.triggers.get(pk=trigger_id)
         except Trigger.DoesNotExist:
-            return Response({"detail": "Trigger not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Trigger not found."}, status=404)
 
-        serializer = TriggerSerializer(trigger, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+        if request.method == "PATCH":
+            serializer = TriggerSerializer(trigger, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
 
-    @action(detail=True, methods=["delete"], url_path=r"triggers/(?P<trigger_id>[^/.]+)")
-    def delete_trigger(self, request, workspace_pk=None, pk=None, trigger_id=None):
-        """Delete a trigger from this automation."""
+        if request.method == "DELETE":
+            trigger.delete()
+            return Response(status=204)
+
+
+    @action(detail=True, methods=["get"], url_path="executions")
+    def executions(self, request, workspace_pk=None, pk=None):
+        """
+        Get execution history for this automation.
+        """
         automation = self.get_object()
-        try:
-            trigger = automation.triggers.get(pk=trigger_id)
-        except Trigger.DoesNotExist:
-            return Response({"detail": "Trigger not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        trigger.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        queryset = (
+            Execution.objects
+            .filter(automation=automation)
+            .order_by("-created_at")
+        )
+
+        serializer = ExecutionSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
     @action(detail=True, methods=["post"])
     def enable(self, request, workspace_pk=None, pk=None):

@@ -20,6 +20,15 @@ class ConnectionViewset(viewsets.ModelViewSet):
     
     def list(self, request, *args, **kwargs):
         qs = self.get_queryset()
+
+        integration_id = request.query_params.get("integrationId")
+        if integration_id and integration_id != "null":
+            try: 
+                integration = Integration.objects.get(id=integration_id)
+                qs = qs.filter(integration=integration)
+            except Integration.DoesNotExist:
+                return Response({"error": f"Integration with ID {integration_id} does not exist"}, status=404)
+
         serializer = ConnectionDisplaySerializer(qs, many=True)
         return Response(serializer.data, status=200)
 

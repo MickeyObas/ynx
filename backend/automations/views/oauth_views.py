@@ -13,14 +13,32 @@ import urllib.parse
 
 @api_view(["GET"])
 def start_oauth(request, integration_id, workspace_id):
+    print("PARAMMSSS")
+    print(request.query_params)
     # service_name = request.query_params.get('service_name')
     connection_id = request.query_params.get("connection_id")
+    from_param = request.query_params.get("from")
+    automation_id = request.query_params.get("automationId")
+
     connection = Connection.objects.get(id=connection_id)
 
     service = get_integration_service(integration_id=integration_id, connection=connection)
     if not service:
         return Response({"error": "Integration not found"}, status=404)
-    auth_url = service.get_auth_url(connection.id)
+    
+    if automation_id and from_param:
+        print("THERE IS AUTOMATION ID AND FROM PARAM")
+        auth_url = service.get_auth_url(
+            connection_id=connection_id,
+            context={
+                "from": from_param,
+                "automation_id": automation_id
+            }
+        )
+    else:
+        print("THERE IS NOTTTTTT AUTOMATION ID AND FROM PARAM")
+        auth_url = service.get_auth_url(connection_id=connection_id)
+
     return redirect(auth_url)
 
 
@@ -29,12 +47,18 @@ def oauth_complete(request, service_name):
     code = request.query_params.get("code")
     state = request.query_params.get('state') # connection ID
     connection = None
+    from_source = None
+    automation_id = None
 
     if state:
         try:
             decoded_state = json.loads(urllib.parse.unquote(state))
+            print("STATTE WHATS UP", decoded_state)
             connection_id = decoded_state.get("connection_id")
+            from_source = decoded_state.get("from")
+            automation_id = decoded_state.get("automation_id")
             connection = Connection.objects.get(id=connection_id)
+
         except Exception as e:
             return Response({"error": "Failed to decode state"})
     
@@ -60,6 +84,11 @@ def oauth_complete(request, service_name):
     connection.last_tested = timezone.now()
     connection.save(update_fields=["status", "last_tested"])
 
+    if from_source == "automation":
+        return redirect(
+        f"http://localhost:3000/dashboard/automations/new"
+        f"?automationId={automation_id}&connection_id={connection.id}"
+    )
 
     # TODO: Setup FRONTEND URL VAR
-    return redirect("http://localhost:3000/dashboard/integrations?success=1")
+    return redirect(f"http://localhost:3000/dashboard/integrations?success=1&connection_id={connection.id}")
