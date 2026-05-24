@@ -4,8 +4,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
-from automations.serializers import AutomationSerializer, TriggerSerializer, ExecutionSerializer
-from automations.models import Automation, Execution
+from automations.serializers import AutomationSerializer, TriggerSerializer, ExecutionSerializer, StepCreateSerializer, StepDetailSerializer, StepUpdateSerializer
+from automations.models import Automation, Execution, Step
 
 
 class AutomationViewSet(viewsets.ModelViewSet):
@@ -68,6 +68,46 @@ class AutomationViewSet(viewsets.ModelViewSet):
         if request.method == "DELETE":
             trigger.delete()
             return Response(status=204)
+
+
+    @action(detail=True, methods=["post"], url_path=r"steps")
+    def add_step(self, request, workspace_pk=None, pk=None):
+        if request.method == "POST":
+            serializer = StepCreateSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            step = serializer.save()
+            
+            return Response(
+                StepDetailSerializer(step).data
+            )
+        
+
+    @action(detail=True, methods=["patch", "delete"], url_path=r"steps/(?P<step_id>[^/.]+)")
+    def manage_steps(self, request, workspace_pk=None, pk=None, step_id=None):
+        if request.method == "PATCH":
+            try:
+                step = Step.objects.get(id=step_id)
+            except Step.DoesNotExist:
+                return Response({"detail": "Step not found"})
+            
+            serializer = StepUpdateSerializer(step, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            step = serializer.save()
+
+            return Response(
+                StepDetailSerializer(step).data
+            )
+        
+        if request.method == "DELETE":
+            try:
+                step = Step.objects.get(id=step_id)
+            except Step.DoesNotExist:
+                return Response({"detail": "Step not found"})
+            
+            step.delete()
+            
+            return Response(status=204)
+
 
 
     @action(detail=True, methods=["get"], url_path="executions")

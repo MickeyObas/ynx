@@ -143,16 +143,22 @@ class Step(TimeStampedModel):
         ACTION = "action", "Action"
         CONDITION = "condition", "Condition"
 
+    class Status(models.TextChoices):
+        DRAFT = "draft"
+        READY = "ready"
+        INVALID = "invalid"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     automation = models.ForeignKey(Automation, on_delete=models.CASCADE, related_name="steps")
-    kind = models.CharField(max_length=20, choices=Kind.choices)
+    kind = models.CharField(max_length=20, choices=Kind.choices, default=Kind.ACTION)
     order = models.PositiveIntegerField(db_index=True)
     integration = models.ForeignKey(Integration, null=True, blank=True, on_delete=models.SET_NULL)
     connection = models.ForeignKey(Connection, null=True, blank=True, on_delete=models.SET_NULL)
     # action_name identifies the specific action within integration e.g. "create_row"
-    action_name = models.CharField(max_length=150, blank=True)
+    action_name = models.CharField(max_length=150, blank=True, null=True)
     # mapping & condition payload — templates or expressions that will be resolved at runtime
     config = models.JSONField(default=dict)
+    status = models.CharField(default=Status.DRAFT)
 
     class Meta:
         unique_together = ("automation", "order")

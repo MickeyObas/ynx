@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from automations.models import Automation, Trigger, Integration, Execution, Connection
+from automations.models import Automation, Trigger, Integration, Execution, Connection, Step
 
 class AutomationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -100,3 +100,109 @@ class ExecutionSerializer(serializers.ModelSerializer):
             "meta",
             "created_at",
         ]
+
+
+class StepCreateSerializer(serializers.ModelSerializer):
+    automation = serializers.PrimaryKeyRelatedField(
+        queryset=Automation.objects.all()
+    )
+
+    integration = serializers.PrimaryKeyRelatedField(
+        queryset=Integration.objects.all(),
+        required=False,
+        allow_null=True
+    )
+
+    connection = serializers.PrimaryKeyRelatedField(
+        queryset=Connection.objects.all(),
+        required=False,
+        allow_null=True
+    )
+
+    class Meta:
+        model = Step
+        fields = [
+            "automation",
+            "kind",
+            "order",
+            "integration",
+            "connection",
+            "action_name",
+            "config",
+        ]
+
+    
+class StepDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Step
+        fields = [
+            "id",
+            "automation",
+            "kind",
+            "order",
+            "integration",
+            "connection",
+            "action_name",
+            "config",
+        ]
+
+class StepUpdateSerializer(serializers.ModelSerializer):
+    integration = serializers.PrimaryKeyRelatedField(
+        queryset=Integration.objects.all(),
+        required=False,
+        allow_null=True
+    )
+
+    connection = serializers.PrimaryKeyRelatedField(
+        queryset=Connection.objects.all(),
+        required=False,
+        allow_null=True
+    )
+
+    class Meta:
+        model = Step
+        fields = [
+            "kind",
+            "order",
+            "integration",
+            "connection",
+            "action_name",
+            "config",
+        ]
+        extra_kwargs = {
+            "kind": {"required": False},
+            "order": {"required": False},
+            "action_name": {"required": False},
+            "config": {"required": False},
+        }
+
+    def validate(self, attrs):
+        """
+        Cross-field validation for workflow correctness.
+        """
+
+        # get current instance values (important for partial updates)
+        instance = self.instance
+
+        kind = attrs.get("kind", instance.kind if instance else None)
+        action_name = attrs.get(
+            "action_name",
+            instance.action_name if instance else None
+        )
+        integration = attrs.get(
+            "integration",
+            instance.integration if instance else None
+        )
+        connection = attrs.get(
+            "connection",
+            instance.connection if instance else None
+        )
+
+        # 2. If integration is set, connection should be compatible
+        if integration and connection:
+            if connection.integration_id != integration.id:
+                raise serializers.ValidationError({
+                    "connection": "Connection does not belong to selected integration."
+                })
+
+        return attrs

@@ -53,3 +53,10 @@ def trigger_list(request, integration_id):
         }
 
     return Response(triggers)
+
+
+@api_view(['GET'])
+def action_list(request, integration_id):
+    service_cls = INTEGRATION_REGISTRY[integration_id]
+    actions = service_cls.as_dict()["actions"]
+    return Response(actions)

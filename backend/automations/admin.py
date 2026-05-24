@@ -41,11 +41,27 @@ class TriggerModelAdmin(admin.ModelAdmin):
     ]
 
 
+class StepModelAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "automation",
+        "integration",
+        "action_name",
+        "connection",
+        "order",
+    ]
+
+    list_display_links = [
+        "id",
+        "automation"
+    ]
+
+
 admin.site.register(Integration)
 admin.site.register(Connection, ConnectionModelAdmin)
 admin.site.register(Automation)
 admin.site.register(Trigger, TriggerModelAdmin)
-admin.site.register(Step)
+admin.site.register(Step, StepModelAdmin)
 admin.site.register(EventRecord, EventRecordModelAdmin)
 admin.site.register(Task)
 admin.site.register(Execution)
