@@ -1,71 +1,38 @@
-from rest_framework import status, permissions, viewsets
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
 
-from django.utils import timezone
-
-from automations.models import Connection, Integration, Workspace
+from automations.models import Connection, Integration
 from automations.serializers import ConnectionSerializer, ConnectionDisplaySerializer
-from integrations.registry import INTEGRATION_REGISTRY, get_integration_service
+from integrations.registry import get_integration_service
 
 
-class ConnectionViewset(viewsets.ModelViewSet):
-    serializer_class = ConnectionSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def get_queryset(self):
-        workspace_id = self.kwargs.get("workspace_pk")
-        queryset = Connection.objects.filter(workspace_id=workspace_id)
-        return queryset
-    
-    def list(self, request, *args, **kwargs):
-        qs = self.get_queryset()
+class ConnectionInitiate(APIView):
+    """POST /workspaces/<workspace_pk>/connections/initiate/"""
+    permission_classes = [IsAuthenticated]
 
-        integration_id = request.query_params.get("integrationId")
-        if integration_id and integration_id != "null":
-            try: 
-                integration = Integration.objects.get(id=integration_id)
-                qs = qs.filter(integration=integration)
-            except Integration.DoesNotExist:
-                return Response({"error": f"Integration with ID {integration_id} does not exist"}, status=404)
+    def post(self, request, workspace_pk):
+        data = request.data.copy()
+        data["workspace_id"] = workspace_pk
 
-        serializer = ConnectionDisplaySerializer(qs, many=True)
-        return Response(serializer.data, status=200)
-
-    # TODO: Change path to initiate
-    @action(detail=False, methods=["post"], url_path="connect")
-    def initiate(self, request, **kwargs):
-        data = request.data
-        workspace_id = self.kwargs.get("workspace_pk")
-        data["workspace_id"] = workspace_id
-
-        # If the workspace already has an existing connection for the integration
-        connection_qs = Connection.objects.filter(
-            workspace_id=workspace_id,
-            integration_id=data["integration_id"]
-        )
-        if connection_qs.exists():
-            connection = connection_qs.first()
-            return Response({
-                "connection_id": connection.id
-            })
+        # Return existing connection if one already exists for this integration
+        existing = Connection.objects.filter(
+            workspace_id=workspace_pk,
+            integration_id=data.get("integration_id"),
+        ).first()
+        if existing:
+            return Response({"connection_id": str(existing.id)})
 
         serializer = ConnectionSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         connection = serializer.save()
-        service = get_integration_service(connection.integration.id, connection)
+
+        # Uncomment when auth flow is ready:
+        # service = get_integration_service(connection.integration.id, connection)
         # auth_url = service.get_auth_url(connection.id)
+
         return Response({
             "connection_id": str(connection.id),
-            # "auth_url": auth_url
-        })
-    
-    def create(self, request, *args, **kwargs):
-        workspace_id = self.kwargs.get("workspace_pk")
-        data = request.data.copy()
-        data["workspace_id"] = workspace_id
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        connection = serializer.save()
-        return Response(serializer.data, status=201)
-
+            # "auth_url": auth_url,
+        }, status=status.HTTP_201_CREATED)

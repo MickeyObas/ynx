@@ -7,6 +7,7 @@ class AutomationSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "workspace",
+            "description",
             "name",
             "owner",
             "status",
@@ -19,6 +20,7 @@ class AutomationSerializer(serializers.ModelSerializer):
 
 
 class TriggerSerializer(serializers.ModelSerializer):
+    # TODO: Break into duty-specific serializers
     """
     Serializer for Automation triggers.
     Handles webhook, polling, or scheduled triggers.

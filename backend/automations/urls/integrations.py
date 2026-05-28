@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import oauth_complete, start_oauth, connection_test, integration_list, integration_detail, trigger_list, action_list
+from automations.views import oauth_complete, start_oauth, connection_test, integration_list, integration_detail, trigger_list, action_list
 
 urlpatterns = [ 
     path("", integration_list),

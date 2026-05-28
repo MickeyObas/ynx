@@ -1,149 +1,234 @@
-from rest_framework import viewsets, status
-from rest_framework.request import Request
-from rest_framework.decorators import action
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from django.shortcuts import get_object_or_404
 
-from automations.serializers import AutomationSerializer, TriggerSerializer, ExecutionSerializer, StepCreateSerializer, StepDetailSerializer, StepUpdateSerializer
-from automations.models import Automation, Execution, Step
+from automations.models import Automation, Execution, Step, Trigger, Workspace
+from automations.serializers import (
+    AutomationSerializer,
+    TriggerSerializer,
+    ExecutionSerializer,
+    StepCreateSerializer,
+    StepDetailSerializer,
+    StepUpdateSerializer,
+)
 
 
-class AutomationViewSet(viewsets.ModelViewSet):
-    """
-    CRUD for Automations + custom actions for enabling/disabling/pausing.
-    """
-    serializer_class = AutomationSerializer
+class AutomationList(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        workspace_id = self.kwargs.get("workspace_pk")
+    def get(self, request):
+        qs = Automation.objects.filter(
+            workspace__members=request.user
+        ).distinct()
 
-        # NOTE: Change later
-        if not workspace_id:
-            queryset = Automation.objects.all()
-        else:
-            queryset = Automation.objects.filter(workspace_id=workspace_id)
-            
-        status_param = self.request.query_params.get("status")
+        workspace_id = request.query_params.get("workspace_id")
+        if workspace_id:
+            qs = qs.filter(workspace_id=workspace_id)
+
+        status_param = request.query_params.get("status")
         if status_param:
-            queryset = queryset.filter(status=status_param)
-        return queryset
+            qs = qs.filter(status=status_param)
 
-    def perform_create(self, serializer):
-        workspace_id = self.kwargs.get("workspace_pk")
-        serializer.save(
-            workspace_id=workspace_id,
-            owner=self.request.user,
-            status=Automation.Status.DRAFT
+        return Response(AutomationSerializer(qs, many=True).data)
+
+    def post(self, request):
+        workspace_id = request.data.get("workspace_id")
+        workspace = get_object_or_404(
+            Workspace.objects.filter(members=request.user),
+            pk=workspace_id
         )
 
-    @action(detail=True, methods=["post"], url_path="triggers")
-    def add_trigger(self, request, workspace_pk=None, pk=None):
-        """Add a new trigger to this automation."""
-        automation = self.get_object()
+        serializer = AutomationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(
+            workspace=workspace,
+            owner=request.user,
+            status=Automation.Status.DRAFT,
+        )
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class AutomationDetail(APIView):
+    """GET/PATCH/DELETE /automations/<pk>/"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        automation = get_object_or_404(
+            Automation.objects.filter(workspace__members=request.user, pk=pk)
+        )
+        serializer = AutomationSerializer(automation)
+        return Response(serializer.data)
+
+    def patch(self, request, pk):
+        automation = get_object_or_404(
+            Automation.objects.filter(workspace__members=request.user, pk=pk)
+        )
+        serializer = AutomationSerializer(automation, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def delete(self, request, pk):
+        automation = get_object_or_404(
+            Automation.objects.filter(workspace__members=request.user, pk=pk)
+        )
+        automation.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ── Status transitions ────────────────────────────────────────────────────────
+
+class AutomationEnable(APIView):
+    """POST /automations/<pk>/enable/"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        automation = get_object_or_404(
+            Automation.objects.filter(workspace__members=request.user, pk=pk)
+        )
+        automation.status = Automation.Status.ENABLED
+        automation.save()
+        return Response({"status": "enabled"})
+
+
+class AutomationDisable(APIView):
+    """POST /automations/<pk>/disable/"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        automation = get_object_or_404(
+            Automation.objects.filter(workspace__members=request.user, pk=pk)
+        )
+        automation.status = Automation.Status.DISABLED
+        automation.save()
+        return Response({"status": "disabled"})
+
+
+class AutomationPause(APIView):
+    """POST /automations/<pk>/pause/"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        automation = get_object_or_404(
+            Automation.objects.filter(workspace__members=request.user, pk=pk)
+        )
+        automation.status = Automation.Status.PAUSED
+        automation.save()
+        return Response({"status": "paused"})
+
+
+# ── Triggers ──────────────────────────────────────────────────────────────────
+
+class TriggerList(APIView):
+    """POST /automations/<pk>/triggers/"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        automation = get_object_or_404(
+            Automation.objects.filter(workspace__members=request.user, pk=pk)
+        )
         serializer = TriggerSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(automation=automation)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @action(
-        detail=True,
-        methods=["patch", "delete"],
-        url_path=r"triggers/(?P<trigger_id>[^/.]+)"
-    )
-    def manage_trigger(self, request, workspace_pk=None, pk=None, trigger_id=None):
-        automation = self.get_object()
 
-        try:
-            trigger = automation.triggers.get(pk=trigger_id)
-        except Trigger.DoesNotExist:
-            return Response({"detail": "Trigger not found."}, status=404)
+class TriggerDetail(APIView):
+    """GET/PATCH/DELETE /automations/<pk>/triggers/<trigger_id>/"""
+    permission_classes = [IsAuthenticated]
 
-        if request.method == "PATCH":
-            serializer = TriggerSerializer(trigger, data=request.data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data)
-
-        if request.method == "DELETE":
-            trigger.delete()
-            return Response(status=204)
-
-
-    @action(detail=True, methods=["post"], url_path=r"steps")
-    def add_step(self, request, workspace_pk=None, pk=None):
-        if request.method == "POST":
-            serializer = StepCreateSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            step = serializer.save()
-            
-            return Response(
-                StepDetailSerializer(step).data
-            )
-        
-
-    @action(detail=True, methods=["patch", "delete"], url_path=r"steps/(?P<step_id>[^/.]+)")
-    def manage_steps(self, request, workspace_pk=None, pk=None, step_id=None):
-        if request.method == "PATCH":
-            try:
-                step = Step.objects.get(id=step_id)
-            except Step.DoesNotExist:
-                return Response({"detail": "Step not found"})
-            
-            serializer = StepUpdateSerializer(step, data=request.data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            step = serializer.save()
-
-            return Response(
-                StepDetailSerializer(step).data
-            )
-        
-        if request.method == "DELETE":
-            try:
-                step = Step.objects.get(id=step_id)
-            except Step.DoesNotExist:
-                return Response({"detail": "Step not found"})
-            
-            step.delete()
-            
-            return Response(status=204)
-
-
-
-    @action(detail=True, methods=["get"], url_path="executions")
-    def executions(self, request, workspace_pk=None, pk=None):
-        """
-        Get execution history for this automation.
-        """
-        automation = self.get_object()
-
-        queryset = (
-            Execution.objects
-            .filter(automation=automation)
-            .order_by("-created_at")
+    def get(self, request, pk, trigger_id):
+        automation = get_object_or_404(
+            Automation.objects.filter(workspace__members=request.user, pk=pk)
+        )
+        trigger = get_object_or_404(
+            Trigger.objects.filter(id=trigger_id, automation=automation)
         )
 
+        serializer = TriggerSerializer(trigger)
+        return Response(serializer.data)
+
+    def patch(self, request, pk, trigger_id):
+        automation = get_object_or_404(
+            Automation.objects.filter(workspace__members=request.user, pk=pk)
+        )
+        trigger = get_object_or_404(
+            Trigger.objects.filter(id=trigger_id, automation=automation)
+        )
+
+        serializer = TriggerSerializer(trigger, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def delete(self, request, pk, trigger_id):
+        automation = get_object_or_404(
+            Automation.objects.filter(workspace__members=request.user, pk=pk)
+        )
+        trigger = get_object_or_404(
+            Trigger.objects.filter(id=trigger_id, automation=automation)
+        )
+        trigger.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ── Steps ─────────────────────────────────────────────────────────────────────
+
+class StepList(APIView):
+    """POST /automations/<pk>/steps/"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        serializer = StepCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        step = serializer.save()
+        return Response(StepDetailSerializer(step).data, status=status.HTTP_201_CREATED)
+
+
+class StepDetail(APIView):
+    """PATCH/DELETE /automations/<pk>/steps/<step_id>/"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk, step_id):
+        step = get_object_or_404(
+            Step.objects.filter(id=step_id)
+        )
+        serializer = StepDetailSerializer(step)
+        return Response(serializer.data)
+
+    def patch(self, request, pk, step_id):
+        step = get_object_or_404(
+            Step.objects.filter(id=step_id)
+        )
+        serializer = StepUpdateSerializer(step, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        step = serializer.save()
+        return Response(StepDetailSerializer(step).data)
+
+    def delete(self, request, pk, step_id):
+        step = get_object_or_404(
+            Step.objects.filter(id=step_id)
+        )
+        step.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ── Executions ────────────────────────────────────────────────────────────────
+
+class ExecutionList(APIView):
+    """GET /automations/<pk>/executions/"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            automation = get_object_or_404(
+                Automation.objects.filter(workspace__members=request.user),
+                pk=pk
+            )
+        except Automation.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        queryset = Execution.objects.filter(automation=automation).order_by("-created_at")
         serializer = ExecutionSerializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-    @action(detail=True, methods=["post"])
-    def enable(self, request, workspace_pk=None, pk=None):
-        automation = self.get_object()
-        automation.status = Automation.Status.ENABLED
-        automation.save()
-        return Response({"status": "enabled"})
-
-    @action(detail=True, methods=["post"])
-    def disable(self, request, workspace_pk=None, pk=None):
-        automation = self.get_object()
-        automation.status = Automation.Status.DISABLED
-        automation.save()
-        return Response({"status": "disabled"})
-
-    @action(detail=True, methods=["post"])
-    def pause(self, request, workspace_pk=None, pk=None):
-        automation = self.get_object()
-        automation.status = Automation.Status.PAUSED
-        automation.save()
-        return Response({"status": "paused"})
+        return Response(serializer.data)

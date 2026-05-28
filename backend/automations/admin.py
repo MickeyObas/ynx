@@ -1,7 +1,6 @@
 from django.contrib import admin
 
-from .models import Integration, Connection, Automation, Trigger, Step, EventRecord, Task, Execution
-
+from .models import Integration, Connection, Automation, Trigger, Step, EventRecord, Task, Execution, Workspace, WorkspaceMembership
 
 class EventRecordModelAdmin(admin.ModelAdmin):
     list_display = [
@@ -57,11 +56,19 @@ class StepModelAdmin(admin.ModelAdmin):
     ]
 
 
+class AutomationModelAdmin(admin.ModelAdmin):
+    list_display = [
+        "name", "owner", "workspace"
+    ]
+
+
 admin.site.register(Integration)
 admin.site.register(Connection, ConnectionModelAdmin)
-admin.site.register(Automation)
+admin.site.register(Automation, AutomationModelAdmin)
 admin.site.register(Trigger, TriggerModelAdmin)
 admin.site.register(Step, StepModelAdmin)
 admin.site.register(EventRecord, EventRecordModelAdmin)
 admin.site.register(Task)
 admin.site.register(Execution)
+admin.site.register(Workspace)
+admin.site.register(WorkspaceMembership)
