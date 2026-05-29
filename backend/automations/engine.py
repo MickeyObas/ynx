@@ -17,7 +17,7 @@ def process_events(events):
 def handle_event(event):
     from triggers.services import event_matches_trigger
 
-    automations = Automation.objects.filter(
+    automations = Automation.objects.select_related('trigger').filter(
         trigger__integration=event.integration,
         trigger__trigger_key=event.trigger
     )
@@ -37,7 +37,7 @@ def handle_event(event):
         else:
             print("Event does not match the trigger")
 
-        event.processed = True
-        event.processed_at = timezone.now()
-        event.save(update_fields=['processed', 'processed_at'])
+    event.processed = True
+    event.processed_at = timezone.now()
+    event.save(update_fields=['processed', 'processed_at'])
 

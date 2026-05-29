@@ -80,7 +80,8 @@ def publish_automation(automation) -> Automation:
     all_errors = {}
 
     # Validate trigger
-    trigger_errors = validate_trigger(automation.trigger)
+    trigger = Trigger.objects.get(automation=automation)
+    trigger_errors = validate_trigger(trigger)
     if trigger_errors:
         all_errors['trigger'] = trigger_errors
 
@@ -103,9 +104,9 @@ def publish_automation(automation) -> Automation:
     # All clean — write the state changes
     now = timezone.now()
 
-    automation.trigger.status = Trigger.Status.ACTIVE
-    automation.trigger.save(update_fields=["status"])
-    
+    trigger.status = Trigger.Status.ACTIVE
+    trigger.save(update_fields=["status"])
+
     automation.steps.all().update(status=Step.Status.READY)
     automation.status = Automation.Status.ENABLED
     automation.published_at = now

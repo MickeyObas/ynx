@@ -93,7 +93,6 @@ class Automation(TimeStampedModel):
     owner = models.ForeignKey(User, on_delete=models.PROTECT, related_name="automations")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     # NOTE: Should an automation have multiple trigers? 
-    trigger = models.ForeignKey("Trigger", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
     settings = models.JSONField(default=dict)
     published_at = models.DateTimeField(blank=True, null=True)
 
@@ -126,7 +125,7 @@ class Trigger(TimeStampedModel):
     config = models.JSONField(default=dict, blank=True)
     integration = models.ForeignKey(Integration, on_delete=models.CASCADE)
     connection = models.ForeignKey(Connection, null=True, blank=True, on_delete=models.SET_NULL)
-    automation = models.ForeignKey("Automation", on_delete=models.CASCADE, related_name="triggers")
+    automation = models.OneToOneField("Automation", on_delete=models.CASCADE, related_name="trigger")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     last_tested_at = models.DateTimeField(null=True, blank=True)
     last_run_at = models.DateTimeField(null=True, blank=True)
