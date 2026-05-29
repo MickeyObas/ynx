@@ -11,6 +11,7 @@ from .automations import (
     AutomationEnable,
     AutomationList,
     AutomationPause,
+    AutomationPublish,
     ExecutionList,
     StepDetail,
     StepList, 

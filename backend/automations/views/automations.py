@@ -12,7 +12,10 @@ from automations.serializers import (
     StepCreateSerializer,
     StepDetailSerializer,
     StepUpdateSerializer,
+    PublishAutomationSerializer
 )
+from automations.services.automations import publish_automation
+from automations.exceptions import AutomationValidationError
 
 
 class AutomationList(APIView):
@@ -78,8 +81,6 @@ class AutomationDetail(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# ── Status transitions ────────────────────────────────────────────────────────
-
 class AutomationEnable(APIView):
     """POST /automations/<pk>/enable/"""
     permission_classes = [IsAuthenticated]
@@ -119,7 +120,28 @@ class AutomationPause(APIView):
         return Response({"status": "paused"})
 
 
-# ── Triggers ──────────────────────────────────────────────────────────────────
+class AutomationPublish(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        automation = get_object_or_404(
+            Automation.objects.prefetch_related('steps', 'trigger'),
+            id=pk,
+            workspace__members=request.user
+        )
+
+        serializer = PublishAutomationSerializer(data=request.data, context={'automation': automation})
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            result = publish_automation(automation)
+        except AutomationValidationError as e:
+            return Response({'errors': e.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(AutomationSerializer(result).data, status=status.HTTP_200_OK)
+
+
+# Triggers
 
 class TriggerList(APIView):
     """POST /automations/<pk>/triggers/"""
@@ -174,7 +196,7 @@ class TriggerDetail(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# ── Steps ─────────────────────────────────────────────────────────────────────
+# Steps
 
 class StepList(APIView):
     """POST /automations/<pk>/steps/"""
@@ -215,7 +237,7 @@ class StepDetail(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# ── Executions ────────────────────────────────────────────────────────────────
+# Executions 
 
 class ExecutionList(APIView):
     """GET /automations/<pk>/executions/"""

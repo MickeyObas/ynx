@@ -32,6 +32,15 @@ class BaseIntegrationService(ABC):
             raise RuntimeError("Connection must be provided")
         self.connection = connection
         
+    @classmethod    
+    def get_action_keys(cls) -> list[str]:
+        return list(cls.ACTIONS.keys())
+    
+    @classmethod
+    def get_action_schema(cls, action_key) -> dict:
+        schema = cls.ACTIONS[action_key].get("config_schema")
+        return schema
+
     @property
     def secrets(self):
         if not self.connection:

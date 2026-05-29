@@ -15,8 +15,9 @@ class AutomationSerializer(serializers.ModelSerializer):
             "settings",
             "created_at",
             "updated_at",
+            "published_at"
         ]
-        read_only_fields = ["id", "owner", "created_at", "updated_at", "workspace"]
+        read_only_fields = ["id", "owner", "created_at", "updated_at", "published_at", "workspace"]
 
 
 class TriggerSerializer(serializers.ModelSerializer):
@@ -208,3 +209,21 @@ class StepUpdateSerializer(serializers.ModelSerializer):
                 })
 
         return attrs
+    
+
+class PublishAutomationSerializer(serializers.Serializer):
+    step_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False  # optional if you derive steps from the automation itself
+    )
+
+    def validate_step_ids(self, step_ids):
+        automation = self.context['automation']
+        automation_step_ids = set(automation.steps.values_list('id', flat=True))
+        invalid = [str(sid) for sid in step_ids if sid not in automation_step_ids]
+
+        if invalid:
+            raise serializers.ValidationError(
+                f"Steps not belonging to this automation: {invalid}"
+            )
+        return step_ids

@@ -101,6 +101,9 @@ def run_trigger_test(*, service, trigger_key, trigger_instance, connection):
         }
 
     if not events:
+        trigger_instance.status = "ready"
+        trigger_instance.save()
+
         return {
             "integration": trigger_instance.integration.id,
             "trigger": trigger_key,
@@ -114,6 +117,8 @@ def run_trigger_test(*, service, trigger_key, trigger_instance, connection):
     # TODO: Add event condition matching logic
 
     serialized_events = [serialize_event(event) for event in events]
+    trigger_instance.status = "ready"
+    trigger_instance.save()
 
     return {
         "integration": trigger_instance.integration.id,

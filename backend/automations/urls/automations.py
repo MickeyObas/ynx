@@ -5,6 +5,7 @@ from automations.views.automations import (
     AutomationEnable,
     AutomationDisable,
     AutomationPause,
+    AutomationPublish,
     TriggerList,
     TriggerDetail,
     StepList,
@@ -18,6 +19,7 @@ urlpatterns = [
     path("<str:pk>/", AutomationDetail.as_view(), name="automation-detail"),
 
     # Status transitions
+    path("<str:pk>/publish/", AutomationPublish.as_view(), name="automation-publish"),
     path("<str:pk>/enable/", AutomationEnable.as_view(), name="automation-enable"),
     path("<str:pk>/disable/", AutomationDisable.as_view(), name="automation-disable"),
     path("<str:pk>/pause/", AutomationPause.as_view(), name="automation-pause"),

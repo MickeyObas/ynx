@@ -74,7 +74,7 @@ class GmailService(GoogleBaseService):
                     "placeholder": "Hello from Automation"
                 },
                 "body": {
-                    "type": "text",
+                    "type": "string",
                     "label": "Email Body",
                     "required": True,
                     "placeholder": "Write your message here"

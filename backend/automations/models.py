@@ -95,6 +95,7 @@ class Automation(TimeStampedModel):
     # NOTE: Should an automation have multiple trigers? 
     trigger = models.ForeignKey("Trigger", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
     settings = models.JSONField(default=dict)
+    published_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         indexes = [models.Index(fields=["workspace", "status"])]
@@ -116,7 +117,7 @@ class Trigger(TimeStampedModel):
     class Status(models.TextChoices):
         ACTIVE = "active", "Active"
         DISABLED = "disabled", "Disabled"
-        TESTED = "tested", "Tested"
+        READY = "ready", "Ready"
         DRAFT = "draft", "Draft"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

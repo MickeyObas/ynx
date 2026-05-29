@@ -1,5 +1,6 @@
 # integrations/registry.py
 from typing import Dict
+from integrations.services.base import BaseIntegrationService
 # from integrations.services.google_forms import GoogleFormsService
 # from integrations.services.gmail import GmailService
 
@@ -14,7 +15,7 @@ def register_integration(service_cls):
     INTEGRATION_REGISTRY[service_cls.id] = service_cls
     return service_cls
 
-def get_integration_service(integration_id, connection=None):
+def get_integration_service(integration_id, connection=None) -> BaseIntegrationService:
     """
     Return the service class for the given integration ID.
     """

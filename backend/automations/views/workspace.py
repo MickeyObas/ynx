@@ -253,3 +253,5 @@ class WorkspaceConnectionInitiate(APIView):
             "connection_id": str(connection.id),
             # "auth_url": auth_url,
         }, status=status.HTTP_201_CREATED)
+
+

@@ -11,12 +11,12 @@ def test_task():
     print("Yep this is working.")
 
 @shared_task(
-        bind=True, 
-        autoretry_for=(Timeout,), 
-        retry_kwargs={"max_retries": 3},
-        retry_backoff=True,
-        retry_backoff_max=60,
-        retry_jitter=True
+    bind=True, 
+    autoretry_for=(Timeout,), 
+    retry_kwargs={"max_retries": 3},
+    retry_backoff=True,
+    retry_backoff_max=60,
+    retry_jitter=True
     )
 def run_automation_task(self, event_id, execution_id):
     print(f"Retry attempt: {self.request.retries}")
