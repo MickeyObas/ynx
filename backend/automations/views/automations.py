@@ -45,6 +45,7 @@ class AutomationList(APIView):
 
         serializer = AutomationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        print(serializer.errors)
         serializer.save(
             workspace=workspace,
             owner=request.user,
@@ -199,9 +200,17 @@ class TriggerDetail(APIView):
 # Steps
 
 class StepList(APIView):
-    """POST /automations/<pk>/steps/"""
+    """GET/POST /automations/<pk>/steps/"""
     permission_classes = [IsAuthenticated]
 
+    def get(self, request, pk):
+        steps = Step.objects.filter(
+            automation_id=pk,
+            automation__workspace__members=request.user,
+        )
+        serializer = StepDetailSerializer(steps, many=True)
+        return Response(serializer.data)
+    
     def post(self, request, pk):
         serializer = StepCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

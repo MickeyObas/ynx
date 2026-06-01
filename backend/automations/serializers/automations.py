@@ -1,7 +1,21 @@
 from rest_framework import serializers
 from automations.models import Automation, Trigger, Integration, Execution, Connection, Step
 
+
+class TriggerDisplaySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Trigger
+        fields = [
+            "id",
+            "type",
+            "integration_id",
+            "trigger_key",
+            "config",
+        ]   
+
 class AutomationSerializer(serializers.ModelSerializer):
+    trigger = TriggerDisplaySerializer(read_only=True)
+
     class Meta:
         model = Automation
         fields = [
@@ -17,7 +31,7 @@ class AutomationSerializer(serializers.ModelSerializer):
             "updated_at",
             "published_at"
         ]
-        read_only_fields = ["id", "owner", "created_at", "updated_at", "published_at", "workspace"]
+        read_only_fields = ["id", "owner", "created_at", "updated_at", "published_at", "workspace", "trigger"]
 
 
 class TriggerSerializer(serializers.ModelSerializer):

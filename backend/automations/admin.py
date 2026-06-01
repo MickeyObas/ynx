@@ -29,6 +29,7 @@ class ConnectionModelAdmin(admin.ModelAdmin):
 
 class TriggerModelAdmin(admin.ModelAdmin):
     list_display = [
+        "automation",
         "id",
         "integration",
         "type",
@@ -58,7 +59,7 @@ class StepModelAdmin(admin.ModelAdmin):
 
 class AutomationModelAdmin(admin.ModelAdmin):
     list_display = [
-        "name", "owner", "workspace"
+        "name", "owner", "workspace", "status"
     ]
 
 

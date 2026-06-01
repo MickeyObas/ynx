@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.db import transaction
 
 from integrations.registry import get_integration_service
 from automations.models import Step, Automation, Trigger
@@ -79,13 +80,11 @@ def publish_automation(automation) -> Automation:
     """
     all_errors = {}
 
-    # Validate trigger
     trigger = Trigger.objects.get(automation=automation)
     trigger_errors = validate_trigger(trigger)
     if trigger_errors:
         all_errors['trigger'] = trigger_errors
 
-    # Validate each step — collect all, don't fail fast
     step_errors = {}
     for step in automation.steps.all():
         errors = validate_step(step)
@@ -95,13 +94,11 @@ def publish_automation(automation) -> Automation:
     if step_errors:
         all_errors['steps'] = step_errors
 
-    # Raise once with everything
     if all_errors:
         raise AutomationValidationError(errors=all_errors)
     
     print("Errors -> ", all_errors)
 
-    # All clean — write the state changes
     now = timezone.now()
 
     trigger.status = Trigger.Status.ACTIVE
