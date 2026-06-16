@@ -67,7 +67,7 @@ def validate_trigger(trigger) -> list[str]:
         errors.append("Trigger type is not set.")
 
     # TODO: Change to "ready and set all checks to ready"
-    if not trigger.status == "ready": 
+    if not trigger.status in [Trigger.Status.READY, Trigger.Status.ACTIVE]: 
         errors.append("Trigger is not properly configured or has not been tested.")
 
     return errors

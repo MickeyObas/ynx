@@ -236,6 +236,13 @@ class StepDetail(APIView):
         serializer = StepUpdateSerializer(step, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         step = serializer.save()
+
+        step.automation.status = Automation.Status.DRAFT
+        step.automation.save()
+
+        # step.automation.trigger.status = Trigger.Status.READY
+        # step.automation.trigger.save()
+
         return Response(StepDetailSerializer(step).data)
 
     def delete(self, request, pk, step_id):
@@ -247,6 +254,20 @@ class StepDetail(APIView):
 
 
 # Executions 
+
+class ExecutionDetail(APIView):
+    def get(self, request, pk, execution_id):
+        try:
+            execution = Execution.objects.get(
+                automation__workspace__members=request.user,
+                id=execution_id
+            )
+        except Execution.DoesNotExist:
+            return Response({"detail": "Execution not found"}, status=404)
+        
+        serializer = ExecutionSerializer(execution)
+        return Response(serializer.data)
+            
 
 class ExecutionList(APIView):
     """GET /automations/<pk>/executions/"""

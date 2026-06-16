@@ -64,18 +64,12 @@ def run_automation_task(self, event_id, execution_id):
                     task.save()
 
             except Exception as step_error:
-                # has_failure = True
                 task.error = str(step_error)
                 task.status = Task.Status.FAILED
                 task.finished_at = timezone.now()
                 task.save()
                 raise Timeout(str(step_error))
         
-        # execution.status = (
-        #     Execution.Status.FAILED
-        #     if has_failure
-        #     else Execution.Status.SUCCESS
-        # )
         execution.status = Execution.Status.SUCCESS
         execution.save()
 

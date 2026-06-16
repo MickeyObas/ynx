@@ -10,6 +10,7 @@ from automations.views.automations import (
     TriggerDetail,
     StepList,
     StepDetail,
+    ExecutionDetail,
     ExecutionList,
 )
 
@@ -33,5 +34,6 @@ urlpatterns = [
     path("<str:pk>/steps/<str:step_id>/", StepDetail.as_view(), name="automation-step-detail"),
 
     # Executions
+    path("<str:pk>/executions/<str:execution_id>/", ExecutionDetail.as_view(), name="automation-execution-detail"),
     path("<str:pk>/executions/", ExecutionList.as_view(), name="automation-execution-list"),
 ]

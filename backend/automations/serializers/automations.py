@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from automations.models import Automation, Trigger, Integration, Execution, Connection, Step
+from automations.models import Automation, Trigger, Integration, Execution, Connection, Step, Task
 
 
 class TriggerDisplaySerializer(serializers.ModelSerializer):
@@ -32,7 +32,6 @@ class AutomationSerializer(serializers.ModelSerializer):
             "published_at"
         ]
         read_only_fields = ["id", "owner", "created_at", "updated_at", "published_at", "workspace", "trigger"]
-
 
 class TriggerSerializer(serializers.ModelSerializer):
     # TODO: Break into duty-specific serializers
@@ -102,8 +101,44 @@ class TriggerSerializer(serializers.ModelSerializer):
         connection = Connection.objects.get(id=connection_id)
         return Trigger.objects.create(integration=integration, connection=connection, **validated_data)
 
+class StepThinSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Step
+        fields = [
+            "id",
+            "kind",
+            "integration",
+            "action_name"
+        ]
+
+class TaskSerializer(serializers.ModelSerializer):
+    step = StepThinSerializer()
+    duration = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Task
+        fields = [
+            "id",
+            "step",
+            "input_payload",
+            "output_payload",
+            "status",
+            "error",
+            "started_at",
+            "finished_at",
+            "duration"   
+        ]
+
+    def get_duration(self, obj):
+        if not obj.started_at or not obj.finished_at:
+            return None
+        
+        return (obj.finished_at - obj.started_at).total_seconds()
 
 class ExecutionSerializer(serializers.ModelSerializer):
+    automation = AutomationSerializer()
+    tasks = TaskSerializer(many=True, read_only=True)
+
     class Meta:
         model = Execution
         fields = [
@@ -112,12 +147,12 @@ class ExecutionSerializer(serializers.ModelSerializer):
             "status",
             "started_at",
             "finished_at",
+            "tasks",
             "attempt",
             "error",
             "meta",
             "created_at",
         ]
-
 
 class StepCreateSerializer(serializers.ModelSerializer):
     automation = serializers.PrimaryKeyRelatedField(
@@ -147,7 +182,6 @@ class StepCreateSerializer(serializers.ModelSerializer):
             "action_name",
             "config",
         ]
-
     
 class StepDetailSerializer(serializers.ModelSerializer):
     class Meta:
@@ -224,7 +258,6 @@ class StepUpdateSerializer(serializers.ModelSerializer):
 
         return attrs
     
-
 class PublishAutomationSerializer(serializers.Serializer):
     step_ids = serializers.ListField(
         child=serializers.UUIDField(),
