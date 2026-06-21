@@ -1,9 +1,6 @@
-import { api } from "./client";
+import { api } from "@/lib/api-client";
+import { AutomationQueryParams } from "./automations.types";
 
-export type AutomationQueryParams = {
-  workspace_id?: string;
-  status?: string;
-};
 
 export const getAutomations = async (params?: AutomationQueryParams) => {
   const res = await api.get("/automations/", {

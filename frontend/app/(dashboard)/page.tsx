@@ -1,6 +1,6 @@
 "use client";
 
-import { useAutomations } from "@/lib/react-query/queries/useAutomations";
+import { useAutomations } from "@/lib/features/automations/automations.queries";
 import { useRouter } from "next/navigation";
 
 export default function DashboardHome() {
@@ -23,7 +23,8 @@ export default function DashboardHome() {
           </p>
         </div>
 
-        <button className="px-4 py-2 bg-black text-white rounded-lg text-sm hover:bg-gray-800">
+        <button 
+          className="px-4 py-2 bg-black text-white rounded-lg text-sm hover:bg-gray-800">
           New Automation
         </button>
       </div>

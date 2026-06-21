@@ -72,6 +72,8 @@ export default function LoginPage() {
             </div>
           )}
 
+          <p>Don't have an account? <a href="/register" className="text-blue-600 hover:underline">Sign Up</a></p>
+
           <button
             type="submit"
             disabled={loading}

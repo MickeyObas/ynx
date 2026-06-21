@@ -64,6 +64,13 @@ class AutomationModelAdmin(admin.ModelAdmin):
         "name", "owner", "workspace", "status"
     ]
 
+class WorkspaceModelAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "name"
+    ]
+
+
 class TaskModelAdmin(admin.ModelAdmin):
     list_display = [
         "id",
@@ -96,5 +103,5 @@ admin.site.register(Step, StepModelAdmin)
 admin.site.register(EventRecord, EventRecordModelAdmin)
 admin.site.register(Task, TaskModelAdmin)
 admin.site.register(Execution)
-admin.site.register(Workspace)
+admin.site.register(Workspace, WorkspaceModelAdmin)
 admin.site.register(WorkspaceMembership)

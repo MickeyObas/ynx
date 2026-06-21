@@ -62,8 +62,8 @@ class Connection(TimeStampedModel):
     workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name="connections")
     integration = models.ForeignKey(Integration, on_delete=models.PROTECT, related_name="connections")
     display_name = models.CharField(max_length=200)
-    config = models.JSONField(default=dict)     
-    secrets = models.JSONField(default=dict)        
+    config = models.JSONField(default=dict, blank=True)     
+    secrets = models.JSONField(default=dict, blank=True)        
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DISABLED)
     last_tested = models.DateTimeField(null=True, blank=True)
 

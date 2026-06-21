@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { tokenStorage } from "./token";
-import { api } from "@/lib/api/client";
+import { api } from "../api-client";
 
 export function useAuth() {
   const [user, setUser] = useState<any>(null);
