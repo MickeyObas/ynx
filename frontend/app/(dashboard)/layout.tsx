@@ -21,12 +21,28 @@ export default function DashboardLayout({
           <h2 className="font-semibold text-lg">YNX</h2>
 
           <nav className="mt-6 space-y-2 text-sm">
-            <button className="block w-full text-left px-2 py-1 rounded hover:bg-gray-100">
+            <button 
+              onClick={() => router.push("/")}
+              className="block w-full text-left px-2 py-1 rounded hover:bg-gray-100">
+              Home
+            </button>
+
+            <button 
+              onClick={() => router.push("/automations")}
+              className="block w-full text-left px-2 py-1 rounded hover:bg-gray-100">
               Automations
             </button>
 
-            <button className="block w-full text-left px-2 py-1 rounded hover:bg-gray-100">
+            <button 
+              onClick={() => router.push("/executions")}
+              className="block w-full text-left px-2 py-1 rounded hover:bg-gray-100">
               Executions
+            </button>
+            
+            <button 
+              onClick={() => router.push("/workspaces")}
+              className="block w-full text-left px-2 py-1 rounded hover:bg-gray-100">
+              Workspaces
             </button>
           </nav>
 

@@ -29,6 +29,21 @@ class WorkspaceList(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
+class SetActiveWorkspace(APIView):
+    def patch(self, request):
+        user = request.user
+        workspace_id = request.data.get('workspaceId')
+        workspace = Workspace.objects.get(
+            members=user,
+            id=workspace_id
+        )
+        user.active_workspace = workspace
+        user.save()
+        return Response({
+            "message": "Active workspace updated",
+            "workspace": WorkspaceSerializer(workspace).data
+        })
+
 class WorkspaceDetail(APIView):
     """GET/PATCH/DELETE /workspaces/<pk>/"""
     permission_classes = [IsAuthenticated]

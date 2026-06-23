@@ -19,6 +19,14 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
     date_joined = models.DateTimeField(default=timezone.now)
     is_first_login = models.BooleanField(default=True)
     
+    active_workspace = models.ForeignKey(
+        "automations.Workspace",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="active_users"
+    )
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 

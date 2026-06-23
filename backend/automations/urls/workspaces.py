@@ -7,11 +7,14 @@ from automations.views.workspace import (
     WorkspaceAutomationList,
     WorkspaceConnectionList,
     WorkspaceConnectionDetail,
-    WorkspaceConnectionInitiate
+    WorkspaceConnectionInitiate,
+    SetActiveWorkspace
 )
 
 urlpatterns = [
     path("", WorkspaceList.as_view(), name="workspace-list"),
+    path("set-active/", SetActiveWorkspace.as_view()),
+
     path("<str:pk>/", WorkspaceDetail.as_view(), name="workspace-detail"),
 
     # Automations

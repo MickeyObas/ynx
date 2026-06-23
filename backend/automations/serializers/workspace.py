@@ -7,20 +7,13 @@ from automations.models import Workspace, WorkspaceMembership
 User = get_user_model()
 
 class WorkspaceMembershipSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-    user_detail = serializers.SerializerMethodField(read_only=True)
+    workspace_id = serializers.UUIDField(source="workspace.id")
+    name = serializers.CharField(source='workspace.name')
 
     class Meta:
         model = WorkspaceMembership
-        fields = ["user", "user_detail", "role", "joined_at"]
+        fields = ["name", "workspace_id", "role", "joined_at"]
         read_only_fields = ["joined_at"]
-
-    def get_user_detail(self, obj):
-        return {
-            "id": obj.user.id,
-            "name": obj.user.full_name,
-            "email": getattr(obj.user, "email", None),
-        }
 
 
 class WorkspaceSerializer(serializers.ModelSerializer):

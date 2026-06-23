@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ReactQueryProvider from "@/lib/react-query/provider";
 import { AuthProvider } from "./lib/auth/auth-provider";
+import { WorkspaceInitializer } from "./features/workspaces/WorkspaceInitializer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,6 +25,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
+  
   return (
     <html
       lang="en"
@@ -31,7 +34,10 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <ReactQueryProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <WorkspaceInitializer />
+            {children}
+          </AuthProvider>
         </ReactQueryProvider>
       </body>
     </html>

@@ -7,6 +7,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from automations.models import Workspace, WorkspaceMembership
+from automations.serializers import WorkspaceSerializer, WorkspaceMembershipSerializer
 from users.models import User
 from users.serializers import (PasswordResetConfirmSerializer,
                                   PasswordResetRequestSerializer,
@@ -16,6 +18,21 @@ from api.utils import is_valid_email
 
 
 from .services import VerificationService
+
+
+@api_view(["GET"])
+def me(request):
+    user = request.user
+    user_workspaces = Workspace.objects.filter(members=request.user)
+    memberships =  WorkspaceMembership.objects.filter(
+        user=user
+    ).select_related("workspace")
+    return Response({
+        "id": user.id,
+        "email": user.email,
+        "active_workspace": WorkspaceSerializer(user.active_workspace).data if user.active_workspace else None,
+        "workspaces": WorkspaceMembershipSerializer(memberships, many=True).data
+    })
 
 
 @api_view(["POST"])

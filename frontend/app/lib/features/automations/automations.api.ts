@@ -1,5 +1,5 @@
 import { api } from "@/lib/api-client";
-import { AutomationQueryParams } from "./automations.types";
+import { Automation, AutomationQueryParams, CreateAutomationDTO } from "./automations.types";
 
 
 export const getAutomations = async (params?: AutomationQueryParams) => {
@@ -15,7 +15,17 @@ export const getAutomation = async (id: string) => {
   return res.data;
 };
 
+export const createAutomation = async (data: CreateAutomationDTO) => {
+  const res = await api.post(`/automations/`, data);
+  return res.data;
+}
+
 export const updateAutomation = async (id: string, data: any) => {
   const res = await api.patch(`/automations/${id}/`, data);
   return res.data;
 };
+
+export const deleteAutomation = async (id: string) => {
+  const res = await api.delete(`/automations/`);
+  return res.data;
+}

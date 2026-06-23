@@ -6,6 +6,7 @@ from . import views
 
 
 urlpatterns =  [
+    path("me/", views.me),
     path("register/", views.register),
     path("verify-email/", views.verify_email),
     path("send-confirmation-code/", views.send_confirmation_code_to_email),
