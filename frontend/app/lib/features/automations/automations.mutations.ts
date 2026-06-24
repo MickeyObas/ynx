@@ -4,6 +4,7 @@ import {
   createAutomation,
   updateAutomation,
   deleteAutomation,
+  publishAutomation,
 } from "./automations.api";
 import { automationKeys } from "./automations.keys";
 import type { Automation, CreateAutomationDTO, UpdateAutomationDTO } from "./automations.types";
@@ -28,12 +29,11 @@ export function useAutomationMutations() {
       },
     }),
 
-    deleteMutation: useMutation({
-      mutationFn: (id: string) => deleteAutomation(id),
-      onSuccess: (_, id) => {
-        queryClient.invalidateQueries({ queryKey: automationKeys.all });
-        queryClient.removeQueries({ queryKey: automationKeys.detail(id) });
-      },
-    }),
+    publishMutation: useMutation({
+      mutationFn: (automationId: string) => publishAutomation(automationId),
+      onSuccess: (_, automationId) => {
+        queryClient.invalidateQueries({ queryKey: automationKeys.detail(automationId)})
+      }
+    })
   };
 }

@@ -37,17 +37,17 @@ class AutomationList(APIView):
         return Response(AutomationSerializer(qs, many=True).data)
 
     def post(self, request):
-        workspace_id = request.data.get("workspace_id")
-        workspace = get_object_or_404(
-            Workspace.objects.filter(members=request.user),
-            pk=workspace_id
-        )
+        # workspace_id = request.data.get("workspace_id")
+        # workspace = get_object_or_404(
+        #     Workspace.objects.filter(members=request.user),
+        #     pk=workspace_id
+        # )
 
         serializer = AutomationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         print(serializer.errors)
         serializer.save(
-            workspace=workspace,
+            workspace=request.user.active_workspace,
             owner=request.user,
             status=Automation.Status.DRAFT,
         )

@@ -2,104 +2,24 @@
 
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api-client";
-
-/* -------------------------
-   API FUNCTIONS (inline for simplicity)
---------------------------*/
-
-const getAutomation = async (id: string) => {
-  const res = await api.get(`/automations/${id}/`);
-  return res.data;
-};
-
-const getSteps = async (id: string) => {
-  const res = await api.get(`/automations/${id}/steps/`);
-  return res.data;
-};
-
-const createStep = async (id: string, data: any) => {
-  const res = await api.post(`/automations/${id}/steps/`, data);
-  return res.data;
-};
-
-const deleteStep = async (id: string, stepId: string) => {
-  await api.delete(`/automations/${id}/steps/${stepId}/`);
-};
-
-const createTrigger = async (id: string, data: any) => {
-  const res = await api.post(`/automations/${id}/triggers/`, data);
-  return res.data;
-};
-
-const testTrigger = async (triggerId: string) => {
-  const res = await api.post(`/automations/triggers/${triggerId}/test/`);
-  return res.data;
-};
-
-const publishAutomation = async (id: string) => {
-  const res = await api.post(`/automations/${id}/publish/`);
-  return res.data;
-};
-
-/* -------------------------
-   PAGE
---------------------------*/
+import { useAutomation } from "@/lib/features/automations/automations.queries";
+import { useStepMutations } from "@/lib/features/steps/steps.mutations";
+import { useSteps } from "@/lib/features/steps/steps.queries";
+import { useTriggerMutations } from "@/lib/features/triggers/triggers.mutations";
+import { useAutomationMutations } from "@/lib/features/automations/automations.mutations";
+import { testTrigger } from "@/lib/features/triggers/triggers.api";
 
 export default function AutomationBuilderPage() {
   const params = useParams();
   const id = params.id as string;
   const queryClient = useQueryClient();
 
-  /* -------------------------
-     DATA
-  --------------------------*/
+  const { data: automation } = useAutomation(id);
+  const { data: steps } = useSteps(id);
+  const { createMutation: createStepMutation, deleteMutation: deleteStepMutation, updateMutation: updateStepMutation } = useStepMutations(id);
+  const { publishMutation: publishAutomationMutation } = useAutomationMutations();
+  const { createMutation: createTriggerMutation } = useTriggerMutations(id); 
 
-  const { data: automation } = useQuery({
-    queryKey: ["automation", id],
-    queryFn: () => getAutomation(id),
-  });
-
-  const { data: steps } = useQuery({
-    queryKey: ["steps", id],
-    queryFn: () => getSteps(id),
-  });
-
-  /* -------------------------
-     MUTATIONS
-  --------------------------*/
-
-  const createStepMutation = useMutation({
-    mutationFn: (data: any) => createStep(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["steps", id] });
-    },
-  });
-
-  const deleteStepMutation = useMutation({
-    mutationFn: (stepId: string) => deleteStep(id, stepId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["steps", id] });
-    },
-  });
-
-  const createTriggerMutation = useMutation({
-    mutationFn: (data: any) => createTrigger(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["automation", id] });
-    },
-  });
-
-  const publishMutation = useMutation({
-    mutationFn: () => publishAutomation(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["automation", id] });
-    },
-  });
-
-  /* -------------------------
-     UI
-  --------------------------*/
 
   if (!automation) {
     return <div className="p-6">Loading...</div>;
@@ -146,8 +66,8 @@ export default function AutomationBuilderPage() {
           <button
             onClick={() =>
               createTriggerMutation.mutate({
-                type: "WEBHOOK",
-                integration_id: "demo",
+                type: "poll",
+                integration_id: "google",
                 connection_id: "demo",
                 trigger_key: "default",
                 config: {},
@@ -155,7 +75,7 @@ export default function AutomationBuilderPage() {
             }
             className="px-3 py-2 bg-black text-white rounded"
           >
-            Configure Trigger
+            Create Trigger
           </button>
         )}
       </section>
@@ -217,7 +137,7 @@ export default function AutomationBuilderPage() {
         </h2>
 
         <button
-          onClick={() => publishMutation.mutate()}
+          onClick={() => publishAutomationMutation.mutate(id)}
           className="px-4 py-2 bg-green-600 text-white rounded"
         >
           Publish Automation

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWorkspaces } from "@/lib/features/workspaces/workspaces.queries";
 import { useWorkspaceStore } from "@/lib/features/workspaces/workspace.store";
-import { switchWorkspaceMutation, useSwitchWorkspaceMutation } from "@/lib/features/workspaces/workspaces.mutations";
+import { useSwitchWorkspaceMutation } from "@/lib/features/workspaces/workspaces.mutations";
 
 // Dummy types
 type Workspace = {

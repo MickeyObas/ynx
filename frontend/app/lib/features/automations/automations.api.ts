@@ -29,3 +29,8 @@ export const deleteAutomation = async (id: string) => {
   const res = await api.delete(`/automations/`);
   return res.data;
 }
+
+export const publishAutomation = async (id: string) => {
+  const res = await api.post(`/automations/${id}/publish/`);
+  return res.data;
+};
